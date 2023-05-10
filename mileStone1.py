@@ -36,7 +36,10 @@ def tokenizer(page_text_content):
         elif len(cur_word) > 0:
             tokens.append(cur_word)
             cur_word = ""
-    return tokens
+    stemmer = PorterStemmer()
+    stemmed_tokens = [stemmer.stem(token) for token in tokens]
+       
+    return stemmed_tokens
 
 
 # open the .json file and read the HTML: Mehmet, do this, (libraries: BeautifulSoup, json), I'm thinking return the text content
