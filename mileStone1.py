@@ -24,7 +24,7 @@ from stop_words import get_stop_words
 
 
 class Posting:
-    def __init__(self, docID, tfidf, position_list):
+    def __init__(self, docID, tfidf):
         self.docId = docID
         self.tfidf = tfidf       # word frequency
 
@@ -57,12 +57,7 @@ def tokenizer(page_text_content):
 
 
 def get_file_text_content(file_path):
-    '''
-    Assuming i get a valid filename to open.
-    '''
-    '''
-    soup_and_soupText: gets the html content from the response and returns the soup object & the page text content
-    '''
+
     try:
         with open(file_path, 'r') as f:
             data = json.load(f)
@@ -75,40 +70,103 @@ def get_file_text_content(file_path):
         return None
 
 
-def get_file_paths(folder_path):
+def map_docID_url(file_path, docID):
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            url = data['url']
+            docID_urls[docID] = url
+    except:
+        print('err in map_url_docID')
 
+
+def get_file_paths(folder_path):
     paths = []
     for dirpath, dirnames, filenames in os.walk(folder_path):
         for filename in filenames:
             if filename.endswith('.json'):
                 file_path = os.path.join(dirpath, filename)
                 paths.append(file_path)
-                # print(filename)
     return paths
 
 
 inverted_index = {}
+docID_urls = {}
 
 
-def generate_inverted_index(tokens):
-    
+def generate_inverted_index(count_tokens, docID):
+
     try:
-        for token in tokens:
+        for token in count_tokens:
+            tfidf = round(count_tokens[token] / len(count_tokens), 4)
+            post = Posting(docID, tfidf)
             if token in inverted_index:
-                
+                inverted_index[token].append(post)
+            else:
+                inverted_index[token] = [post]
+    except:
+        print('err')
+        raise
+
+
+def token_counter(tokens):
+    token_count = {}
+    for token in tokens:
+        if not token:
+            continue
+        if token in token_count:
+            token_count[token] += 1
+        else:
+            token_count[token] = 1
+
+    return token_count
+
+
+def generate_report():
+    try:
+        filename = 'REPORT.txt'
+
+        if os.path.isfile(filename):
+            os.remove(filename)
+
+        file = open(filename, 'w')
+        file.write("REPORT: \n")
+
+        for token in inverted_index:
+            file.write(token + ": ")
+            new_line_count = 0
+            for post in inverted_index[token]:
+                file.write("(" + str(post.docId) +
+                           ", " + str(post.tfidf) + ') ')
+                new_line_count += 1
+                if new_line_count >= 10:
+                    file.write('\n')
+                    new_line_count = 0
+
+            file.write('\n------------------------------\n')
+
+        file.close()
+        print('DONE')
+    except Exception as e:
+        print('ERROR: ', e)
+
 
 def launch_milestone_1():
-    folder_path = '/home/mnadi/121/A3/search_engine/DEV'
-    paths = get_file_paths(folder_path)
-    n = 0
-
+    folder_path = '/Users/mehmetnadi/Desktop/Software/School/Spring23/121/assignment3/search_engine/DEV'
+    paths = get_file_paths(folder_path)  # list of paths to all the files
+    docID = 0
     for path in paths:
+        docID += 1
         text_content = get_file_text_content(path)
         if not text_content:
             continue
+        map_docID_url(path, docID)  # {docID : url}
         tokens = tokenizer(text_content)
-        
-        
+        token_count = token_counter(tokens)
+        generate_inverted_index(token_count, docID)
+        if docID == 100:
+            generate_report()
+            break
 
 
 launch_milestone_1()
