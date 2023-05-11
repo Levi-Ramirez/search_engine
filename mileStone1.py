@@ -27,17 +27,18 @@ def tokenizer(page_text_content):
     prevchar = ""
     nextChar = ""
     cur_word = ""
+    stemmer = PorterStemmer()
     for ch in page_text_content: #read line character by character
-
+# pig's --> pigs is this a problem?
         if ch in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-'": #check if character is in english alphabet or a number
             if ch in ".-'":
                continue
             cur_word += ch.lower() #convert that ch to lower case and add it to the cur_word
         elif len(cur_word) > 0:
-            tokens.append(cur_word)
+            tokens.append(stemmer.stem(cur_word))
             cur_word = ""
-    stemmer = PorterStemmer()
-    stemmed_tokens = [stemmer.stem(token) for token in tokens]
+    
+    #stemmed_tokens = [stemmer.stem(token) for token in tokens]
        
     return stemmed_tokens
 
