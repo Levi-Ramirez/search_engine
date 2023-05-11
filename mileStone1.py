@@ -52,7 +52,7 @@ def tokenizer(page_text_content):
 # also, we will have to figure out how to deal with broken HTML (BeautifulSoup might handle it)
 
 
-def openFileURL(fileName):
+def open_file_url(fileName):
     '''
     Assuming i get a valid filename to open.
     '''
@@ -71,37 +71,37 @@ def openFileURL(fileName):
         return None
 
 
-test1 = openFileURL(
+test1 = open_file_url(
     '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json')
 
 print('8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json: ', test1)
-test5 = openFileURL(
+test5 = open_file_url(
     '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/brokenHTML.json')
 
 print('brokenHTML.json returns: ', test5)
 
-test2 = openFileURL(
+test2 = open_file_url(
     'this file does not exit')
 print('FILE DOES NOT EXIST returns: ', test2)
 
-test3 = openFileURL(
+test3 = open_file_url(
     '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/noContent.json')
 
 print('noContent.json returns: ', test3)
 
-test4 = openFileURL(
+test4 = open_file_url(
     '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/emptyContent.json')
 
 print('emptyContent.json returns: ', test4)
 
 
-def urlID(url):
+def url_id(url):
     return hash(url)  # not 100% sure this works
 
 # colin, if you can plz address my comments below. we can discuss them later
 
 
-def addInvIndex(textContent, url):
+def add_inv_index(textContent, url):
     urlID = urlID(url)  # get url ID
     # is adding it to a dictionary already placing the URL in sorted order?
     for token in textContent:
