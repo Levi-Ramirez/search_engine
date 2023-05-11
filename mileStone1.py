@@ -30,10 +30,7 @@ class Posting:
 
 
 def tokenizer(page_text_content):
-    ''' 
-    tokenizer: Takes the page_text_content returned by BeautifulSoup (as a string) and parses this text into tokens.
-    - Tokens are a list of strings who's length that is greater than 1.
-    '''
+    '''this function gets text content of a site and tokenzie it. '''
     try:
         tokens = []
         cur_word = ""
@@ -57,6 +54,7 @@ def tokenizer(page_text_content):
 
 
 def get_file_text_content(file_path):
+    '''this function retuns the text content of a json file'''
 
     try:
         with open(file_path, 'r') as f:
@@ -71,6 +69,7 @@ def get_file_text_content(file_path):
 
 
 def map_docID_url(file_path, docID):
+    '''this function maps docID to its URL'''
     try:
         with open(file_path, 'r') as f:
             data = json.load(f)
@@ -81,6 +80,7 @@ def map_docID_url(file_path, docID):
 
 
 def get_file_paths(folder_path):
+    '''this function gives a list of paths of all the json files'''
     paths = []
     for dirpath, dirnames, filenames in os.walk(folder_path):
         for filename in filenames:
@@ -95,6 +95,7 @@ docID_urls = {}
 
 
 def generate_inverted_index(count_tokens, docID):
+    '''this function generates/fills the inverted_index. Gets count_tokes and docID as parameters.'''
 
     try:
         for token in count_tokens:
@@ -109,6 +110,7 @@ def generate_inverted_index(count_tokens, docID):
 
 
 def token_counter(tokens):
+    '''this funciton returns a dictionary of words as keys and number of occurences of those words as values'''
     token_count = {}
     for token in tokens:
         if not token:
@@ -122,6 +124,7 @@ def token_counter(tokens):
 
 
 def generate_report():
+    '''This funciton generates our report for milestone 1. It will print the word and the list of all the documents that word seen and frequency of that word in that doc. for example, "random_word": [(1, 0.24) (99, 0.0029) ... ] where every tupple is (docID, frequency)'''
     try:
         filename = 'REPORT.txt'
 
@@ -152,6 +155,7 @@ def generate_report():
 
 
 def launch_milestone_1():
+    '''our main funciton.'''
     folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     paths = get_file_paths(folder_path)  # list of paths to all the files
     docID = 0
@@ -159,12 +163,15 @@ def launch_milestone_1():
         if docID >= 1000:
             break
         docID += 1
+        # text_content of file located at path
         text_content = get_file_text_content(path)
-        if not text_content:
+        if not text_content:  # skip if no text content
             continue
-        map_docID_url(path, docID)  # {docID : url}
-        tokens = tokenizer(text_content)
-        token_count = token_counter(tokens)
+        # assign docID to its proper URL // {docID : url}
+        map_docID_url(path, docID)
+        tokens = tokenizer(text_content)  # tokenize the text content
+        token_count = token_counter(tokens)  # count tokens
+        # fill/generate inverted index
         generate_inverted_index(token_count, docID)
     generate_report()
 
