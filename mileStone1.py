@@ -48,8 +48,8 @@ def tokenizer(page_text_content):
             elif len(cur_word) > 0:
                 tokens.append(stemmer.stem(cur_word))
                 cur_word = ""
-    except:
-        print('error in tokenizer')
+    except Exception as e:
+        print(f"Error tokenizer: {str(e)}")
         return []
     # stemmed_tokens = [stemmer.stem(token) for token in tokens]
 
@@ -66,7 +66,7 @@ def get_file_text_content(file_path):
             text_content = soup.get_text()
             return text_content if text_content else None
     except Exception as e:
-        print('Error:', e)
+        print(f"Error processing file {file_path}: {str(e)}")
         return None
 
 
@@ -76,8 +76,8 @@ def map_docID_url(file_path, docID):
             data = json.load(f)
             url = data['url']
             docID_urls[docID] = url
-    except:
-        print('err in map_url_docID')
+    except Exception as e:
+        print(f"Error Mappign DocID to URL {file_path}, {docID} : {str(e)}")
 
 
 def get_file_paths(folder_path):
@@ -104,9 +104,8 @@ def generate_inverted_index(count_tokens, docID):
                 inverted_index[token].append(post)
             else:
                 inverted_index[token] = [post]
-    except:
-        print('err')
-        raise
+    except Exception as e:
+        print(f"Error Generating Inverted Index {docID} : {str(e)}")
 
 
 def token_counter(tokens):
@@ -133,7 +132,7 @@ def generate_report():
         file.write("REPORT: \n")
 
         for token in inverted_index:
-            file.write(token + ": ")
+            file.write(token + ": [ \n")
             new_line_count = 0
             for post in inverted_index[token]:
                 file.write("(" + str(post.docId) +
@@ -143,19 +142,22 @@ def generate_report():
                     file.write('\n')
                     new_line_count = 0
 
-            file.write('\n------------------------------\n')
+            file.write('] \n------------------------------\n')
 
         file.close()
         print('DONE')
     except Exception as e:
-        print('ERROR: ', e)
+        print(
+            f"Error Generating Report: {str(e)}")
 
 
 def launch_milestone_1():
-    folder_path = '/Users/mehmetnadi/Desktop/Software/School/Spring23/121/assignment3/search_engine/DEV'
+    folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     paths = get_file_paths(folder_path)  # list of paths to all the files
     docID = 0
     for path in paths:
+        if docID >= 1000:
+            break
         docID += 1
         text_content = get_file_text_content(path)
         if not text_content:
@@ -164,9 +166,7 @@ def launch_milestone_1():
         tokens = tokenizer(text_content)
         token_count = token_counter(tokens)
         generate_inverted_index(token_count, docID)
-        if docID == 100:
-            generate_report()
-            break
+    generate_report()
 
 
 launch_milestone_1()
