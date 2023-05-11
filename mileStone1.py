@@ -1,74 +1,90 @@
-import re
-from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-import validators
-from urllib import robotparser
 import shelve
-from urllib.parse import urljoin
-import hashlib
+import json
 from simhash import Simhash
 from nltk.stem import PorterStemmer # to stem
 from nltk.tokenize import sent_tokenize, word_tokenize
 
-invInd = {} #dictionary of lists (key: terms, value: postings for each term)
+# This is file will create our inverted index
+# 0) fetch the document, open file
+# 1) tokenize the document
+# 2) create postings (go thru token list, generate docID, get word positions, count words up for wordFreq)
+# 3) put it all into inverted index (key = term/token, value = list of postings)
 
 
 class Posting:
-   def __init__(self, docID, tfidf, fields):
-      self.docId = docID       # number documents from 1-n
-      self.tfidf = tfidf       # word frequency count
-      self.fields = fields     # corresponding extent list piece (one for title, for bold, etc)
+  def __init__(self, docID, tfidf, position_list, fields):
+    self.docId = docID       # number documents from 1-n
+    self.tfidf = tfidf       # word frequency count
+    self.position_list
+    self.fields = fields     # corresponding extent list piece (one for title, for bold, etc)
     
+class InvertedIndex:
+  def __init__(self):
+    self.invertedIndex = dict()  # dictionary of lists (key: terms, value: postings for each term)
+    self.ps = PorterStemmer()
+  
+  def tokenizer(self, json_file_path):
+    try:
+      # load the json file, each json file has: URL, Content, Encoding (ascii or utf-8)
+      with open(json_file_path) as f:
+        json_data = json.load(f)     # read contents of file and converts it into a python dict or list
 
-# tokenizer taken from last assigment
-# NEED TO CHANGE FOR THIS ASSIGNMENT'S REQUIREMNTS: ex: U.S.A --> USA (plus more fixes)
-# Don't need to remove stop words
-# Need to stem the words before adding them to tokens (ex: swam --> swim, swimming --> swim), use PorterStemmer
-def tokenizer(page_text_content):
-    ''' 
-    tokenizer: Takes the page_text_content returned by BeautifulSoup (as a string) and parses this text into tokens.
-    - Tokens are a list of strings who's length that is greater than 1.
-    '''
-    tokens = []
-    ps = PorterStemmer()
-    
-    cur_word = ""
-    for ch in page_text_content: # read line character by character
-        if ch in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890': #check if character is in english alphabet or a number
-            cur_word += ch.lower() # convert that ch to lower case and add it to the cur_word
+      # check if json file has html data for us to tokenize
+      for key, val in json_data.items():
+        if isinstance(val, str) and "<html" in val.lower():
+          has_html_data = True
         else:
-            stemmed_word = ps.stem(cur_word)
-            tokens.append(stemmed_word) # found space, add cur word to token list 
-            cur_word = ""               # reset cur_word
+          return []
+      
+      # use BS4 to get text content
+      soup = BeautifulSoup(json["content"], "html.parser")
+      soup.prettify()  # fix broken HTML
+      page_text_content = soup.get_text()
+
+      # get tokens from text content
+      tokens = []
+      cur_word = ""
+      for ch in page_text_content: # read line character by character
+          if ch in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890': #check if character is in english alphabet or a number
+              cur_word += ch.lower() # convert that ch to lower case and add it to the cur_word
+          else:
+              stemmed_word = self.ps.stem(cur_word)
+              tokens.append(stemmed_word) # found space, add cur word to token list 
+              cur_word = ""               # reset cur_word
+      
+      tokens.append(cur_word)         # last word unadded
+      return tokens
     
-    tokens.append(cur_word)         # last word unadded
-    return tokens
+    except (IOError, json.JSONDecodeError) as e:
+      print("Error while processing JSON file")
+      return []
 
-
-# open the .json file and read the HTML: Mehmet, do this, (libraries: BeautifulSoup, json), I'm thinking return the text content
-# also, we will have to figure out how to deal with broken HTML (BeautifulSoup might handle it)
-def openFileURL(fileName):
+  def createInvertedIndex():
     pass
 
 
-def urlID(url):
 
-    return hash(url) #not 100% sure this works
 
-# colin, if you can plz address my comments below. we can discuss them later
+# create inverted index
 def addInvIndex(textContent, url):
     urlID = urlID(url) #get url ID
-    #is adding it to a dictionary already placing the URL in sorted order?
     for token in textContent:
       if token in invInd: # it is a token in the dictionary
-        #would a dictionary make sense here, or would a list make more sense?
-        #my only concern is that would a dictionary place it in sorted order?
         if urlID in invInd[token]: 
           invInd[token][urlID] += 1 #if urlID is in invInd[token], increment its counter
         else:
           invInd[token][urlID] = 1 #if urlID is not invInd[token], add it and set it's val to 1
       else: #token is not in the dictionary
         invInd[token] = {urlID : 1} #ex: "hello" = {1904984, 1}
+
+
+
+def main():
+  pass
+
+if __name__ == "__main__":
+  main()
         
 
 
