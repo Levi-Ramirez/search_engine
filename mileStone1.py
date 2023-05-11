@@ -4,6 +4,7 @@ import json
 from simhash import Simhash
 from nltk.stem import PorterStemmer # to stem
 from nltk.tokenize import sent_tokenize, word_tokenize
+import psutil
 
 # This is file will create our inverted index
 # 0) fetch the document, open file
@@ -13,17 +14,27 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 
 
 class Posting:
-  def __init__(self, docID, tfidf, position_list, fields):
+  def __init__(self, docID, tfidf, position_list):
     self.docId = docID       # number documents from 1-n
     self.tfidf = tfidf       # word frequency count
-    self.position_list
-    self.fields = fields     # corresponding extent list piece (one for title, for bold, etc)
+    self.position_set        # set containing all positions that the term exists in document
+    #self.fields = fields    # corresponding extent list piece (one for title, for bold, etc)
     
+
 class InvertedIndex:
   def __init__(self):
     self.invertedIndex = dict()  # dictionary of lists (key: terms, value: postings for each term)
     self.ps = PorterStemmer()
   
+
+  def get_json_file_paths(root_dir):
+    json_paths = []
+    for cur_dir, all_dirs, all_files in os.walk(root_dir):     # os.walk() traverses a directory tree using DFS, iterating over all files and directories in it
+      for f in all_files:
+        if f.endswith(".json"):
+          json_paths.append(os.path.join(cur_dir, f))
+
+
   def tokenizer(self, json_file_path):
     try:
       # load the json file, each json file has: URL, Content, Encoding (ascii or utf-8)
@@ -60,28 +71,54 @@ class InvertedIndex:
       print("Error while processing JSON file")
       return []
 
-  def createInvertedIndex():
-    pass
+
+  def create_postings(self, docID, tokens):
+    # create dictionary of key = token/term, value = tuple of (word_freq, positions_set)
+    cur_word_pos = 0
+    temp_dict = {}
+    for t in tokens:
+      if t not in temp_dict:
+        pos_set = set()
+        pos_set.add(cur_word_pos)
+        temp_dict[t] = (1, pos_set)         # word_freq, positions_set
+      else:
+        temp_dict[t][0] += 1                # update word_freq
+        temp_dict[t][1].add(cur_word_pos)   # update pos_set
+      cur_word_pos += 1
+    
+    # develop postings objects using temp_dict (very inefficient i think lol, wrote this at 2 am)
+    dict_term_to_posting = []
+    for term in temp_dict:
+      posting = Posting(docID, temp_dict[term][0], temp_dict[term][1])
+      dict_term_to_posting[term] = posting
+
+    return dict_term_to_posting
 
 
-
-
-# create inverted index
-def addInvIndex(textContent, url):
-    urlID = urlID(url) #get url ID
-    for token in textContent:
-      if token in invInd: # it is a token in the dictionary
-        if urlID in invInd[token]: 
-          invInd[token][urlID] += 1 #if urlID is in invInd[token], increment its counter
-        else:
-          invInd[token][urlID] = 1 #if urlID is not invInd[token], add it and set it's val to 1
-      else: #token is not in the dictionary
-        invInd[token] = {urlID : 1} #ex: "hello" = {1904984, 1}
-
+  def create_and_store_InvertedIndex(self, root_dir, store_shelve_file_path):
+    json_file_paths = self.get_json_file_paths(root_dir)
+    
+    # open shelve file, put terms + their postings inside
+    with shelve.open(store_shelve_file_path) as my_shelve:
+      docID = 0
+      for f in json_file_paths:
+        tokens = self.tokenize(f)
+        dict_term_to_posting = self.create_postings(docID, tokens)
+        
+        for t in tokens:
+          if t in my_shelf:
+            my_shelve[t].add(dict_term_to_posting[t])
+          else:
+            postings_set = set()
+            postings_set.add(dict_term_to_posting[t])
+            my_shelve[t] = postings_set
+        docID += 1
 
 
 def main():
-  pass
+  root_dir = ""
+  ii = InvertedIndex()
+  ii.create_and_store_InvertedIndex(root_dir)
 
 if __name__ == "__main__":
   main()
