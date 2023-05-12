@@ -5,6 +5,7 @@ from simhash import Simhash
 from nltk.stem import PorterStemmer # to stem
 from nltk.tokenize import sent_tokenize, word_tokenize
 import psutil
+import os
 
 # This is file will create our inverted index
 # 0) fetch the document, open file
@@ -27,7 +28,7 @@ class InvertedIndex:
     self.ps = PorterStemmer()
   
 
-  def get_json_file_paths(root_dir):
+  def get_json_file_paths(self, root_dir):
     json_paths = []
     for cur_dir, all_dirs, all_files in os.walk(root_dir):     # os.walk() traverses a directory tree using DFS, iterating over all files and directories in it
       for f in all_files:
@@ -101,24 +102,37 @@ class InvertedIndex:
     # open shelve file, put terms + their postings inside
     with shelve.open(store_shelve_file_path) as my_shelve:
       docID = 0
-      for f in json_file_paths:
-        tokens = self.tokenize(f)
-        dict_term_to_posting = self.create_postings(docID, tokens)
-        
-        for t in tokens:
-          if t in my_shelf:
-            my_shelve[t].add(dict_term_to_posting[t])
-          else:
-            postings_set = set()
-            postings_set.add(dict_term_to_posting[t])
-            my_shelve[t] = postings_set
-        docID += 1
+      try:
+        for f in json_file_paths:
+          
+          # if RAM usage exceeds 50%
+          # save the current shelve file, call create_and_store_InvertedIndex() again with new info (change to be non-recursive)
+          total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines([-1]).split()[1:])
+          if round((used_memory/total_memory) * 100, 2) >= 50: 
+            my_shelve.sync()
+            my_shelve.close()
+            create_and_store_InvertedIndex(f, new_shelve_path)     # f is current_root_directory
+          tokens = self.tokenize(f)
+          dict_term_to_posting = self.create_postings(docID, tokens)
+          
+          for t in tokens:
+            if t in my_shelf:
+              my_shelve[t].add(dict_term_to_posting[t])
+            else:
+              postings_set = set()
+              postings_set.add(dict_term_to_posting[t])
+              my_shelve[t] = postings_set
+          docID += 1
+
+      except Exception as e:
+        #print(f"An error occurred while processing the file: {file_path}")
+        print(f"Error message: {str(e)}")
 
 
 def main():
   root_dir = ""
   ii = InvertedIndex()
-  ii.create_and_store_InvertedIndex(root_dir)
+  ii.create_and_store_InvertedIndex("/home/czejda/cs121hw3/search_engine/ANALYST", "analyst.shelve")
 
 if __name__ == "__main__":
   main()
