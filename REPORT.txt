@@ -1,0 +1,3 @@
+REPORT: 
+Number of indexed documents: 1988Number of unique words: 1. 
+num_unique_words

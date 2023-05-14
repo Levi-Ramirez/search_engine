@@ -34,12 +34,13 @@ class InvertedIndex:
       for f in all_files:
         if f.endswith(".json"):
           json_paths.append(os.path.join(cur_dir, f))
+    return json_paths
 
 
   def tokenizer(self, json_file_path):
     try:
       # load the json file, each json file has: URL, Content, Encoding (ascii or utf-8)
-      with open(json_file_path) as f:
+      with open(json_file_path, 'r') as f:
         json_data = json.load(f)     # read contents of file and converts it into a python dict or list
 
       # check if json file has html data for us to tokenize
@@ -101,38 +102,69 @@ class InvertedIndex:
     
     # open shelve file, put terms + their postings inside
     with shelve.open(store_shelve_file_path) as my_shelve:
-      docID = 0
-      try:
-        for f in json_file_paths:
-          
-          # if RAM usage exceeds 50%
-          # save the current shelve file, call create_and_store_InvertedIndex() again with new info (change to be non-recursive)
-          total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines([-1]).split()[1:])
-          if round((used_memory/total_memory) * 100, 2) >= 50: 
-            my_shelve.sync()
-            my_shelve.close()
-            create_and_store_InvertedIndex(f, new_shelve_path)     # f is current_root_directory
-          tokens = self.tokenize(f)
-          dict_term_to_posting = self.create_postings(docID, tokens)
-          
-          for t in tokens:
-            if t in my_shelf:
-              my_shelve[t].add(dict_term_to_posting[t])
-            else:
-              postings_set = set()
-              postings_set.add(dict_term_to_posting[t])
-              my_shelve[t] = postings_set
-          docID += 1
+        docID = 0
+        try:
+            for f in json_file_paths:
+                
+                # if RAM usage exceeds 50%
+                # save the current shelve file, call create_and_store_InvertedIndex() again with new info (change to be non-recursive)
+            #   total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines().split()[1:])
+            #   if round((used_memory/total_memory) * 100, 2) >= 50: 
+            #     my_shelve.sync()
+            #     my_shelve.close()
+            #     create_and_store_InvertedIndex(self, f, new_shelve_path)     # f is current_root_directory
+                
+                tokens = self.tokenizer(f)
+                dict_term_to_posting = self.create_postings(docID, tokens)
+                
+                for t in tokens:
+                    if t in my_shelf:
+                        my_shelve[t].append(dict_term_to_posting[t])
+                    else:
+                        postings_list = []
+                        postings_list.append(dict_term_to_posting[t])
+                        my_shelve[t] = postings_list
+                docID += 1
+            my_shelve["num_unique_words"] = docID         # store the num of documents indexed here
 
-      except Exception as e:
-        #print(f"An error occurred while processing the file: {file_path}")
-        print(f"Error message: {str(e)}")
+        except Exception as e:
+            #print(f"An error occurred while processing the file: {file_path}")
+            print(f"Error message: {str(e)}")
 
+
+def generate_report(inverted_index_shelve_file):
+  fname = "REPORT.txt"
+  fname2 = "InvertedIndex.txt"    # store it in a human readable format (not shelve file)
+
+  if os.path.isfile(fname):
+    os.remove(fname)
+  if os.path.isfile(fname2):
+    os.remove(fname2)
+  
+  with shelve.open(inverted_index_shelve_file) as my_shelve:
+    f = open(fname, 'w')
+    f2 = open(fname2, 'w')
+    f.write("REPORT: \n")
+    f.write("Number of indexed documents: " + str(my_shelve["num_unique_words"]))
+    f.write("Number of unique words: " + str(len(my_shelve)) + ". \n")
+
+    # put shelve file of inverted_index info into text file
+    for term, term_posting_list in my_shelve.items():
+      f.write(f"{term}\n")
+      for posting in term_posting_list:
+        f.write(f"DocID: {posting.docID}, Freq: {posting.tfidf}, Positions: {posting.position_set}.\n")
+
+    # get size of text file
+    file_size = os.path.getsize(f2)
+    f.write("Size of the inverted index: " + str(file_size // 1024) + " KB.\n")
+    f.close()
+    f2.close()
 
 def main():
   root_dir = ""
   ii = InvertedIndex()
   ii.create_and_store_InvertedIndex("/home/czejda/cs121hw3/search_engine/ANALYST", "analyst.shelve")
+  generate_report("analyst.shelve")
 
 if __name__ == "__main__":
   main()
