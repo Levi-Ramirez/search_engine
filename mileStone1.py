@@ -1,6 +1,6 @@
 import re
 import json
-
+import os
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import validators
@@ -8,119 +8,218 @@ from urllib import robotparser
 import shelve
 from urllib.parse import urljoin
 import hashlib
-from simhash import Simhash
+''' the commented out libraries don't import correctly '''
+# from porter2stemmer import Porter2Stemmer
+# from simhash import Simhash
+import nltk
 from nltk.stem import PorterStemmer  # to stem
-from nltk.tokenize import sent_tokenize, word_tokenize
+# from nltk.tokenize import sent_tokenize, word_tokenize
 from stop_words import get_stop_words
+import shelve
 
-invInd = {}  # dictionary of dictionaries
 
-# tokenizer taken from last assingment
-# NEED TO CHANGE FOR THIS ASSIGNMENT'S REQUIREMNTS: ex: U.S.A --> USA (plus more fixes)
-# Don't need to remove stop words
-# cases: apostraphies, hyphens, periods, 
-# becareful of periods at the end of sentences
-# Need to stem the words before adding them to tokens (ex: swam --> swim, swimming --> swim), use PorterStemmer
+'''
+1. loop DEV folder and open each file
+2. get the html content of json file
+3. populate inverted_index dictionary
+4. create report
+
+'''
+
+docID = 0
+inverted_index = {}
+docID_urls = {}
+
+
+class Posting:
+    def __init__(self, docID, token_locs, tfidf):
+        self.docId = docID
+        self.token_locs = token_locs
+        self.tfidf = tfidf       # word frequency
 
 
 def tokenizer(page_text_content):
-    ''' 
-    tokenizer: Takes the page_text_content returned by BeautifulSoup (as a string) and parses this text into tokens.
-    - Tokens are a list of strings who's length that is greater than 1.
-    '''
-    tokens = []
-    prevchar = ""
-    nextChar = ""
-    cur_word = ""
-    stemmer = PorterStemmer()
-    for ch in page_text_content: #read line character by character
-# pig's --> pigs is this a problem?
-        if ch in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-'": #check if character is in english alphabet or a number
-            if ch in ".-'":
-               continue
-            cur_word += ch.lower() #convert that ch to lower case and add it to the cur_word
-        elif len(cur_word) > 0:
-            tokens.append(stemmer.stem(cur_word))
-            cur_word = ""
-    
-    #stemmed_tokens = [stemmer.stem(token) for token in tokens]
-       
-    return stemmed_tokens
-
-
-# open the .json file and read the HTML: Mehmet, do this, (libraries: BeautifulSoup, json), I'm thinking return the text content
-# also, we will have to figure out how to deal with broken HTML (BeautifulSoup might handle it)
-
-
-def open_file_url(fileName):
-    '''
-    Assuming i get a valid filename to open.
-    '''
-    '''
-    soup_and_soupText: gets the html content from the response and returns the soup object & the page text content
-    '''
+    '''this function gets text content of a site and tokenzie it. '''
     try:
-        with open(fileName, 'r') as f:
+        tokens = []
+        cur_word = ""
+        stemmer = PorterStemmer()
+        for ch in page_text_content:  # read line character by character
+            # pig's --> pigs is this a problem?
+            # check if character is in english alphabet or a number
+            if ch in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-'":
+                if ch in ".-'":
+                    continue
+                cur_word += ch.lower()  # convert that ch to lower case and add it to the cur_word
+            elif len(cur_word) > 0:
+                tokens.append(stemmer.stem(cur_word))
+                cur_word = ""
+    except Exception as e:
+        print(f"Error tokenizer: {str(e)}")
+        return []
+    # stemmed_tokens = [stemmer.stem(token) for token in tokens]
+
+    return tokens
+
+
+def get_file_text_content(file_path):
+    '''this function retuns the text content of a json file'''
+
+    try:
+        with open(file_path, 'r') as f:
             data = json.load(f)
             html_content = data['content']
             soup = BeautifulSoup(html_content, 'html.parser')
             text_content = soup.get_text()
             return text_content if text_content else None
     except Exception as e:
-        print('Error:', e)
+        print(f"Error processing file {file_path}: {str(e)}")
         return None
 
 
-test1 = open_file_url(
-    '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json')
-
-print('8ef6d99d9f9264fc84514cdd2e680d35843785310331e1db4bbd06dd2b8eda9b.json: ', test1)
-test5 = open_file_url(
-    '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/brokenHTML.json')
-
-print('brokenHTML.json returns: ', test5)
-
-test2 = open_file_url(
-    'this file does not exit')
-print('FILE DOES NOT EXIST returns: ', test2)
-
-test3 = open_file_url(
-    '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/noContent.json')
-
-print('noContent.json returns: ', test3)
-
-test4 = open_file_url(
-    '/home/mnadi/121/A3/search_engine/DEV/aiclub_ics_uci_edu/emptyContent.json')
-
-print('emptyContent.json returns: ', test4)
+def map_docID_url(file_path, docID):
+    '''this function maps docID to its URL'''
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            url = data['url']
+            docID_urls[docID] = url
+    except Exception as e:
+        print(f"Error Mappign DocID to URL {file_path}, {docID} : {str(e)}")
 
 
-def url_id(url):
-    return hash(url)  # not 100% sure this works
+def get_file_paths(folder_path):
+    '''this function gives a list of paths of all the json files'''
+    paths = []
+    for dirpath, dirnames, filenames in os.walk(folder_path):
+        for filename in filenames:
+            if filename.endswith('.json'):
+                file_path = os.path.join(dirpath, filename)
+                paths.append(file_path)
+    return paths
 
-# colin, if you can plz address my comments below. we can discuss them later
 
+def generate_inverted_index(token_locs, docID):
+    '''this function generates/fills the inverted_index. Gets count_tokes and docID as parameters.'''
 
-def add_inv_index(textContent, url):
-    urlID = urlID(url)  # get url ID
-    # is adding it to a dictionary already placing the URL in sorted order?
-    for token in textContent:
-        if token in invInd:  # it is a token in the dictionary
-            # would a dictionary make sense here, or would a list make more sense?
-            # my only concern is that would a dictionary place it in sorted order?
-            if urlID in invInd[token]:
-                # if urlID is in invInd[token], incriment its counter
-                invInd[token][urlID] += 1
+    try:
+        for token in token_locs:
+            # tfidf = round(count_tokens[token] / len(count_tokens), 4)
+            tfidf = len(token_locs[token])
+            post = Posting(docID, token_locs[token], tfidf)
+            if token in inverted_index:
+                inverted_index[token].append(post)
             else:
-                # if urlID is not invInd[token], add it and set it's val to 1
-                invInd[token][urlID] = 1
-        else:  # token is not in the dictionary
-            invInd[token] = {urlID: 1}  # ex: "hello" = {1904984, 1}
+                inverted_index[token] = [post]
+    except Exception as e:
+        print(f"Error Generating Inverted Index {docID} : {str(e)}")
 
 
-# for all files: (need to find out how to loop through all of the files and pass them to open_file_url(fileName))
-#  1. retrieve file & assign ID (aka docID)
-#  2. tokenize file
-#  3. pass docID and tokenized text to add_inv_index
+# def token_counter(tokens):
+#     '''this funciton returns a dictionary of words as keys and number of occurences of those words as values'''
+#     token_count = {}
+#     for token in tokens:
+#         if not token:
+#             continue
+#         if token in token_count:
+#             token_count[token] += 1
+#         else:
+#             token_count[token] = 1
+
+#     return token_count
+
+def token_locator(tokens):
+    '''this function returns a dictionary of words with a list of the indexes where it the word is'''
+    token_locs = {}
+    i = 0
+    for token in tokens:
+        if not token:
+            continue
+        if token in token_locs:
+            token_locs[token].append(i)
+        else:
+            token_locs[token] = [i]
+        i += 1
+
+    return token_locs
 
 
+def generate_report():
+    '''This funciton generates our report for milestone 1. It will print the word and the list of all the documents that word seen and frequency of that word in that doc. for example, "random_word": [(1, 0.24) (99, 0.0029) ... ] where every tupple is (docID, frequency)'''
+    try:
+        filename = 'REPORT.txt'
+        file2 = 'InvertedIndex.txt'
+
+        if os.path.isfile(filename):
+            os.remove(filename)
+
+        if os.path.isfile(file2):
+            os.remove(file2)
+
+        file = open(filename, 'w')
+        file.write("REPORT: \n")
+
+        InvertedIndexTXT = open(file2, 'w')
+
+        file.write('Number of indexed documents: ' + str(docID) + '.\n')
+
+        file.write('Number of unique words: ' +
+                   str(len(inverted_index)) + '.\n')
+
+        for token in inverted_index:
+            InvertedIndexTXT.write(token + ": [ \n")
+            new_line_count = 0
+            for post in inverted_index[token]:
+                InvertedIndexTXT.write("(" + str(post.docId) +
+                                       ", " + str(post.token_locs) + ', ' + str(post.tfidf) + ') ')
+                new_line_count += 1
+                if new_line_count >= 10:
+                    InvertedIndexTXT.write('\n')
+                    new_line_count = 0
+
+            InvertedIndexTXT.write('] \n------------------------------\n')
+
+        file_path = 'path_to_your_file'  # Replace with the actual file path
+
+        file_size = os.path.getsize(file2)
+        file.write('Size of the inverted index: ' +
+                   str(file_size // 1024) + ' KB.\n')
+        file.close()
+        InvertedIndexTXT.close()
+        print('DONE')
+    except Exception as e:
+        print(
+            f"Error Generating Report: {str(e)}")
+
+
+def launch_milestone_1():
+    '''our main funciton.'''
+    # folder_path = '/home/mnadi/121/A3/search_engine/DEV'
+    folder_path = '/home/leviar/121/assign3/search_engine/DEV'
+    paths = get_file_paths(folder_path)  # list of paths to all the files
+    print(paths)
+    for path in paths:
+        print("1")
+        global docID
+        if docID >= 100:
+             break
+
+        # text_content of file located at path
+        text_content = get_file_text_content(path)
+        if not text_content:  # skip if no text content
+            continue
+
+        # if this file is a duplicate, continue ^^^
+
+        docID += 1
+        # assign docID to its proper URL // {docID : url}
+        map_docID_url(path, docID)
+        tokens = tokenizer(text_content)  # tokenize the text content
+        # token_count = token_counter(tokens)  # count tokens
+        token_locs = token_locator(tokens)  # get a list of token positions
+        # fill/generate inverted index
+        generate_inverted_index(token_locs, docID)
+    generate_report()
+
+
+launch_milestone_1()
