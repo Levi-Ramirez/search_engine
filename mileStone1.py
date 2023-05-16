@@ -1,6 +1,7 @@
 import re
 import json
 import os
+import os.path
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import validators
@@ -25,17 +26,20 @@ import shelve
 4. create report
 
 '''
-
+fileCount = 0
+indexSplitCounter = 0
 docID = 0
 inverted_index = {}
 docID_urls = {}
 
 
-class Posting:
-    def __init__(self, docID, token_locs, tfidf):
-        self.docId = docID
-        self.token_locs = token_locs
-        self.tfidf = tfidf       # word frequency
+# class Posting:
+#     def __init__(self, docID, token_locs, tfidf):
+#         self.docId = docID
+#         self.token_locs = token_locs
+#         self.tfidf = tfidf       # word frequency
+
+#instead, lets try to define a list
 
 
 def tokenizer(page_text_content):
@@ -101,12 +105,25 @@ def get_file_paths(folder_path):
 
 def generate_inverted_index(token_locs, docID):
     '''this function generates/fills the inverted_index. Gets count_tokes and docID as parameters.'''
-
+    global indexSplitCounter
+    global fileCount
+    indexSplitCounter += 1
+    if indexSplitCounter > 5:
+        fileName = "index" + str(fileCount) + ".txt"
+        if os.path.exists(fileName):
+            os.remove(fileName)
+        with open(fileName, "w") as thisFile:
+            json.dump(inverted_index, thisFile)
+        
+        inverted_index.clear()
+        indexSplitCounter = 0
+        fileCount += 1
     try:
         for token in token_locs:
             # tfidf = round(count_tokens[token] / len(count_tokens), 4)
             tfidf = len(token_locs[token])
-            post = Posting(docID, token_locs[token], tfidf)
+            # post = Posting(docID, token_locs[token], tfidf)
+            post = [docID, token_locs[token], tfidf]
             if token in inverted_index:
                 inverted_index[token].append(post)
             else:
@@ -170,8 +187,10 @@ def generate_report():
             InvertedIndexTXT.write(token + ": [ \n")
             new_line_count = 0
             for post in inverted_index[token]:
-                InvertedIndexTXT.write("(" + str(post.docId) +
-                                       ", " + str(post.token_locs) + ', ' + str(post.tfidf) + ') ')
+                # InvertedIndexTXT.write("(" + str(post.docId) +
+                #                        ", " + str(post.token_locs) + ', ' + str(post.tfidf) + ') ')
+                InvertedIndexTXT.write("(" + str(post[0]) +
+                                        ", " + str(post[1]) + ', ' + str(post[2]) + ') ')
                 new_line_count += 1
                 if new_line_count >= 10:
                     InvertedIndexTXT.write('\n')
@@ -201,7 +220,7 @@ def launch_milestone_1():
     for path in paths:
         print("1")
         global docID
-        if docID >= 100:
+        if docID >= 20:
              break
 
         # text_content of file located at path
