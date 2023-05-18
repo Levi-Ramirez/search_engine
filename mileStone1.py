@@ -31,6 +31,7 @@ indexSplitCounter = 0
 docID = 0
 inverted_index = {}
 docID_urls = {}
+index_of_index = {}
 
 
 # class Posting:
@@ -374,6 +375,21 @@ def generate_report():
         print(
             f"Error Generating Report: {str(e)}")
 
+def create_index_of_index():
+    full_index = open("full_index.txt", 'r')
+    while True:
+        pos = full_index.tell()
+        curLine = full_index.readline()
+        if not curLine:
+            break #need to break here!
+        tempDict = json.loads(curLine)
+        for token in tempDict:
+            if token in index_of_index:
+                print("error, index shouldn't already exist")
+            else:
+                index_of_index[token] = pos
+        
+
 
 def launch_milestone_1():
     '''our main funciton.'''
@@ -403,6 +419,8 @@ def launch_milestone_1():
     
     generate_report()
     merge_partial_indexes() #merges the partial indexes
+    create_index_of_index() #creates index_of_index (global dictionary)
+
 
 
 launch_milestone_1()
