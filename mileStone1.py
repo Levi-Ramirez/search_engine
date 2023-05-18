@@ -59,6 +59,8 @@ def tokenizer(page_text_content):
             elif len(cur_word) > 0:
                 tokens.append(stemmer.stem(cur_word))
                 cur_word = ""
+        if len(cur_word) > 1: 
+            tokens.append(cur_word)
     except Exception as e:
         print(f"Error tokenizer: {str(e)}")
         return []
@@ -226,7 +228,7 @@ def merge_partial_indexes():
         i = 0
         dictHolder = {} #holder is the new dictionary which we will write to the file
         # print(arrNextMinIndexesDict)
-        print(minKey)
+        #print(minKey)
         
         while i < fileCount:
             if minKey in arrNextMinIndexesDict[i]:
@@ -237,7 +239,7 @@ def merge_partial_indexes():
                 if(arrNextMinIndexesText[i] != ""):
                     arrNextMinIndexesDict[i] = json.loads(arrNextMinIndexesText[i]) # update this to the next dict entry
             i += 1
-        print(dictHolder)
+        #print(dictHolder)
         json.dump(dictHolder, full_index)
         full_index.write('\n')
         
@@ -422,5 +424,35 @@ def launch_milestone_1():
     create_index_of_index() #creates index_of_index (global dictionary)
 
 
+def launch_milestone_2():
+    userInput = input("Enter query:")
+    print(userInput)
+    listTokensInfo = []
+    termList = tokenizer(userInput)
+    print(termList)
+    #AND only query process:
 
-launch_milestone_1()
+    # retrieve the queries
+    full_index = open("full_index.txt", 'r')
+    
+    for x in termList:
+        if x in index_of_index:
+            #retrieve the term information, place it in a list of lists
+            pos = index_of_index[x]
+            full_index.seek(pos)
+            curLine = full_index.readline()
+            tempDict = json.loads(curLine)
+            for token in tempDict:
+                listTokensInfo.append(tempDict[token])
+    print(listTokensInfo)
+    # find their intersection
+    
+
+if __name__ == '__main__':
+    launch_milestone_1()
+    launch_milestone_2()
+
+    # print(index_of_index)
+
+
+
