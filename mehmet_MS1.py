@@ -12,7 +12,6 @@ from simhash import Simhash
 from nltk.stem import PorterStemmer  # to stem
 from nltk.tokenize import sent_tokenize, word_tokenize
 from stop_words import get_stop_words
-import shelve
 
 
 '''
@@ -20,7 +19,6 @@ import shelve
 2. get the html content of json file
 3. populate inverted_index dictionary
 4. create report
-
 '''
 
 docID = 0
