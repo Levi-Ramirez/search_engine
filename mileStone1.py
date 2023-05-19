@@ -31,7 +31,6 @@ indexSplitCounter = 0
 docID = 0
 inverted_index = {}
 docID_urls = {}
-index_of_index = {}
 
 
 # class Posting:
@@ -40,7 +39,7 @@ index_of_index = {}
 #         self.token_locs = token_locs
 #         self.tfidf = tfidf       # word frequency
 
-#instead, lets try to define a list
+# instead, lets try to define a list
 
 
 def tokenizer(page_text_content):
@@ -59,6 +58,8 @@ def tokenizer(page_text_content):
             elif len(cur_word) > 0:
                 tokens.append(stemmer.stem(cur_word))
                 cur_word = ""
+        if len(cur_word) > 1:
+            tokens.append(stemmer.stem(cur_word))
     except Exception as e:
         print(f"Error tokenizer: {str(e)}")
         return []
@@ -84,10 +85,13 @@ def get_file_text_content(file_path):
 
 def map_docID_url(file_path, docID):
     '''this function maps docID to its URL'''
+    global docID_urls
     try:
         with open(file_path, 'r') as f:
             data = json.load(f)
             url = data['url']
+            # print('yooo',docID_urls)
+            # print('url', url)
             docID_urls[docID] = url
     except Exception as e:
         print(f"Error Mappign DocID to URL {file_path}, {docID} : {str(e)}")
@@ -103,6 +107,7 @@ def get_file_paths(folder_path):
                 paths.append(file_path)
     return paths
 
+
 def write_to_file(thisFile, newDict):
     # for key, val in newDict.items():
     #     tempDict = {key: val}
@@ -114,13 +119,12 @@ def write_to_file(thisFile, newDict):
         thisFile.write('\n')
 
 
-
 def generate_inverted_index(token_locs, docID):
     '''this function generates/fills the inverted_index. Gets count_tokes and docID as parameters.'''
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
-    if indexSplitCounter > 5:
+    if indexSplitCounter > 6000:
         fileName = "index" + str(fileCount) + ".txt"
         if os.path.exists(fileName):
             os.remove(fileName)
@@ -128,8 +132,8 @@ def generate_inverted_index(token_locs, docID):
             res = sorted(inverted_index.items())
             newDict = dict(res)
             # json.dump(newDict, thisFile)  REPLACE THIS LINE
-            write_to_file(thisFile, newDict) #replacement
-        
+            write_to_file(thisFile, newDict)  # replacement
+
         inverted_index.clear()
         indexSplitCounter = 0
         fileCount += 1
@@ -146,10 +150,11 @@ def generate_inverted_index(token_locs, docID):
     except Exception as e:
         print(f"Error Generating Inverted Index {docID} : {str(e)}")
 
+
 def getKey(myStr):
     firstQuote = myStr.find('"')
     secondQuote = myStr.find('"', firstQuote + 1)
-    if firstQuote == -1 or secondQuote == -1: #if there is no key, return empty string
+    if firstQuote == -1 or secondQuote == -1:  # if there is no key, return empty string
         return ""
     keyStr = myStr[firstQuote + 1: secondQuote]
     return keyStr
@@ -159,7 +164,7 @@ def merge_step(dictHolder, dict2):
     '''
     this merges two given dictionaries (in this case tokens) together from the passed dictionaries
     - technically, there should only be one key per dictionary (see merge_partial_indexes)
-    
+
     '''
     for key in dict2:
         if key in dictHolder:
@@ -167,34 +172,33 @@ def merge_step(dictHolder, dict2):
             i = 0
             k = 0
             dict2List = dict2[key]
-            for posting in dictHolder[key]: #for every posting already in the dictHolder
+            # for every posting already in the dictHolder
+            for posting in dictHolder[key]:
                 if (posting[0] > dict2List[k][0]):
                     # dictHolder[key].insert(i, dictHolder[key].insert(dict2List[k]))
                     dictHolder[key].insert(i, dict2List[k])
-                    k =+ 1
-                    if k >= len(dict2List): #reached the end
+                    k = + 1
+                    if k >= len(dict2List):  # reached the end
                         break
                 i += 1
-            
-            while k < len(dict2List): # if we havent reached the end of dict2List
+
+            while k < len(dict2List):  # if we havent reached the end of dict2List
                 dictHolder[key].append(dict2List[k])
                 k += 1
-                
+
         else:
             dictHolder[key] = dict2[key]
-    
-
 
 
 def merge_partial_indexes():
     '''Merges the partial indexes'''
-    if os.path.isfile("full_index.txt"):
-            os.remove("full_index.txt")
-    full_index = open("full_index.txt", 'w')
+    if os.path.isfile("full_index2.txt"):
+        os.remove("full_index2.txt")
+    full_index = open("full_index2.txt", 'w')
     global fileCount
     tempCount = 0
     arrFiles = []
-    while tempCount < fileCount: #open all files loop
+    while tempCount < fileCount:  # open all files loop
         fileName = "index" + str(tempCount) + ".txt"
         tempHolder = open(fileName, "r")
         arrFiles.append(tempHolder)
@@ -204,50 +208,57 @@ def merge_partial_indexes():
     # while True:
     tempCount = 0
     while tempCount < fileCount:
-        arrNextMinIndexesText.append(arrFiles[tempCount].readline()) #will be a list of dictionary entries represented by text
-        arrNextMinIndexesDict.append(json.loads(arrNextMinIndexesText[tempCount])) #will be a list of ACTUAL dictionary entries
+        # will be a list of dictionary entries represented by text
+        # arrNextMinIndexesText.append(arrFiles[tempCount].readline())
+        arrNextMinIndexesText.append(read_large_line(arrFiles[tempCount]))
+        # will be a list of ACTUAL dictionary entries
+        arrNextMinIndexesDict.append(
+            json.loads(arrNextMinIndexesText[tempCount]))
         tempCount += 1
     # minKey = getKey(arrNextMinIndexesText[0])
-    while(True):
+    while (True):
         minKey = ""
-        for x in arrNextMinIndexesText: #gets the first non-empty string and assign it to minKey
+        for x in arrNextMinIndexesText:  # gets the first non-empty string and assign it to minKey
             if x != "":
                 minKey = x
                 break
-        if minKey == "": #means that all of them were empty strings, nothing else to read from all files
+        if minKey == "":  # means that all of them were empty strings, nothing else to read from all files
             break
 
         for x in arrNextMinIndexesText:
             curKey = getKey(x)
             if curKey != "" and (curKey < minKey):
                 minKey = curKey
-        # if(minKey == float('inf')): 
+        # if(minKey == float('inf')):
         #     break
         i = 0
-        dictHolder = {} #holder is the new dictionary which we will write to the file
+        dictHolder = {}  # holder is the new dictionary which we will write to the file
         # print(arrNextMinIndexesDict)
-        print(minKey)
-        
+        # print(minKey)
+
         while i < fileCount:
             if minKey in arrNextMinIndexesDict[i]:
                 # print(arrNextMinIndexesDict[i])
                 merge_step(dictHolder, arrNextMinIndexesDict[i])
                 # print(dictHolder)
-                arrNextMinIndexesText[i] = arrFiles[i].readline() #update this to the next line
-                if(arrNextMinIndexesText[i] != ""):
-                    arrNextMinIndexesDict[i] = json.loads(arrNextMinIndexesText[i]) # update this to the next dict entry
+                # update this to the next line
+                # arrNextMinIndexesText[i] = arrFiles[i].readline()
+                arrNextMinIndexesText[i] = read_large_line(arrFiles[i])
+                if (arrNextMinIndexesText[i] != ""):
+                    # update this to the next dict entry
+                    arrNextMinIndexesDict[i] = json.loads(
+                        arrNextMinIndexesText[i])
             i += 1
-        print(dictHolder)
+        # print(dictHolder)
         json.dump(dictHolder, full_index)
         full_index.write('\n')
-        
-
 
     tempCount = 0
-    while tempCount < fileCount: #close all files loop
+    while tempCount < fileCount:  # close all files loop
         arrFiles[tempCount].close()
         tempCount += 1
     full_index.close()
+
 
 '''OLD CODE'''
 # def merge_partial_indexes():
@@ -261,8 +272,8 @@ def merge_partial_indexes():
 #         #read and throw away the first {
 #         arr[tempCount].read(1)
 #         tempCount += 1
-    
-    
+
+
 #     #read in 50 indexes for each file (or until the end of the file):
 #     buffArr = []
 #     buffArrLeftOver = []
@@ -274,7 +285,7 @@ def merge_partial_indexes():
 #     buffArr.append(arr[2].read(10)) #read 500 characters and store in buffArr MODIFY THESE
 #     buffArrLeftOver.append(buffArr[2][leftOverBegin + 2:])
 #     while tempCount < fileCount:
-        
+
 #         # ADD LEFTOVER HERE
 #         bufArr[tempCount] = buffArrLeftOver[tempCount] +  buffArr[tempCount] #append old leftover to the continued read
 #         leftOverBegin = buffArr[tempCount].rindex(']]')
@@ -286,15 +297,12 @@ def merge_partial_indexes():
 #                 #     continue  # Continue to the next line if the desired string is not found in the current line
 #                 # break  # Break the outer loop if the desired string is found in a line
 #         tempCount += 1
-            
+
 
 #     tempCount = 0
 #     while tempCount < fileCount: #close all files loop
 #         arr[tempCount].close()
 #         tempCount += 1
-    
-    
-
 
 
 # def token_counter(tokens):
@@ -355,7 +363,7 @@ def generate_report():
                 # InvertedIndexTXT.write("(" + str(post.docId) +
                 #                        ", " + str(post.token_locs) + ', ' + str(post.tfidf) + ') ')
                 InvertedIndexTXT.write("(" + str(post[0]) +
-                                        ", " + str(post[1]) + ', ' + str(post[2]) + ') ')
+                                       ", " + str(post[1]) + ', ' + str(post[2]) + ') ')
                 new_line_count += 1
                 if new_line_count >= 10:
                     InvertedIndexTXT.write('\n')
@@ -375,31 +383,63 @@ def generate_report():
         print(
             f"Error Generating Report: {str(e)}")
 
-def create_index_of_index():
-    full_index = open("full_index.txt", 'r')
+
+def read_large_line(file):
+    chunk_size = 4096  # Adjust the chunk size as per your requirements
+    line = ''
+
     while True:
-        pos = full_index.tell()
-        curLine = full_index.readline()
-        if not curLine:
-            break #need to break here!
-        tempDict = json.loads(curLine)
-        for token in tempDict:
-            if token in index_of_index:
-                print("error, index shouldn't already exist")
-            else:
-                index_of_index[token] = pos
-        
+        chunk = file.readline(chunk_size)
+        line += chunk
+
+        if len(chunk) < chunk_size or '\n' in chunk:
+            break
+
+    return line
+
+
+def create_index_of_index():
+    global docID_urls
+    try:
+        if os.path.exists('index_of_index2.shelve'):
+            os.remove('index_of_index2.shelve')
+
+        with shelve.open("index_of_index2.shelve") as index_of_index_shelve:
+            # full_index = open("full_index.txt", 'r')
+            full_index = open("full_index2.txt", 'r')
+            while True:
+                pos = full_index.tell()
+                curLine = read_large_line(full_index)
+                if not curLine:
+                    break  # need to break here!
+                tempDict = json.loads(curLine)
+                for token in tempDict:
+                    if token in index_of_index_shelve:
+                        raise Exception("error, index shouldn't already exist")
+                    else:
+                        index_of_index_shelve[token] = pos
+        full_index.close()
+
+        if os.path.exists('docID_urls.shelve'):
+            os.remove('docID_urls.shelve')
+
+        with shelve.open("docID_urls.shelve") as docID_urls_shelve:
+            # print(docID_urls)
+            docID_urls_shelve['data'] = docID_urls
+
+    except Exception as e:
+        print('ERROR in create_index_of_index:', str(e))
 
 
 def launch_milestone_1():
     '''our main funciton.'''
-    # folder_path = '/home/mnadi/121/A3/search_engine/DEV'
-    folder_path = '/home/leviar/121/assign3/search_engine/DEV'
+    folder_path = '/home/mnadi/121/A3/search_engine/DEV'
+    # folder_path = '/home/leviar/121/assign3/search_engine/DEV'
     paths = get_file_paths(folder_path)  # list of paths to all the files
     for path in paths:
         global docID
-        if docID >= 20:
-             break
+        # if docID >= 20:  # remove this
+        #     break
 
         # text_content of file located at path
         text_content = get_file_text_content(path)
@@ -416,11 +456,11 @@ def launch_milestone_1():
         token_locs = token_locator(tokens)  # get a list of token positions
         # fill/generate inverted index
         generate_inverted_index(token_locs, docID)
-    
-    generate_report()
-    merge_partial_indexes() #merges the partial indexes
-    create_index_of_index() #creates index_of_index (global dictionary)
 
+    create_index_of_index()  # creates index_of_index (global dictionary)
+    merge_partial_indexes()  # merges the partial indexes
+    generate_report()
 
 
 launch_milestone_1()
+# create_index_of_index()
