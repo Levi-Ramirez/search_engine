@@ -18,7 +18,7 @@ import time
 class Posting:                          # one per term per document 
   def __init__(self, docID):
     self.docId = docID                  # number documents from 1-n
-    self.tfidf = 0                      # use later, after all tfs and df's have been found: term frequency * inverse document frequency = (1 + log(tf)) * log(N / df)
+    #self.tfidf = 0                      # use later, after all tfs and df's have been found: term frequency * inverse document frequency = (1 + log(tf)) * log(N / df)
     self.tf = 0                         # term freq (per document)
     self.position_lst = list()          # set containing all positions that the term exists in document
     #self.fields = fields               # corresponding extent list piece (one for title, for bold, etc)
@@ -53,7 +53,7 @@ class InvertedIndex:
         if f.endswith(".json"):
           json_paths.append(os.path.join(cur_dir, f))
     self.docCount = len(json_paths)
-    return json_paths[:200]
+    return json_paths
 
   def is_json_file_size_within_ram_limit(self, file_path):
     file_size_in_bytes = os.path.getsize(file_path)
@@ -78,13 +78,14 @@ class InvertedIndex:
 
       # get tokens from text content
       tokens = word_tokenize(page_text_content)
+      #tokens = page_text_content.split()
       stemmed_tokens = [self.ps.stem(token.lower()) for token in tokens if token.isalnum()]
-      
+      #stemmed_tokens = tokens
       return stemmed_tokens, url 
     
-    except (IOError, json.JSONDecodeError) as e:
-      print("Error while processing JSON file")
-      return []
+    except:
+      print(f"Encountered exception, file: {json_file_path}")
+      return [], ""
 
 
   def create_postings(self, docID, tokens):
@@ -109,12 +110,10 @@ class InvertedIndex:
       my_shelve_dict = dict()
       start_time = time.time()
       last_ts = time.time()
+      last_size = 0
+      total_size = 0
       for docID, f in enumerate(json_file_paths):
-        if docID % 100 == 1:
-          ts = time.time()
-          print(f"d_id: {docID}, time for last 100: {ts - last_ts}, avg time per query: {(ts - start_time) / docID}", flush=True)
-          #print()
-          last_ts = ts
+        
         tokens, url = self.tokenizer(f)
         self.docID_to_url[docID] = url          # keep track of which docID corresponds to which url
         dict_term_to_posting = self.create_postings(docID, tokens)     # returns dictionary (key = term, value = a singular posting for the term)
@@ -133,13 +132,19 @@ class InvertedIndex:
           if t not in my_shelve_dict:
             my_shelve_dict[t] = list()
           my_shelve_dict[t].append(posting)
-          
-            # new_index = "shelve_index" + str(self.num_indexes) + ".shelve"
-            # self.num_indexes += 1
-        with shelve.open("analyst.shelve") as my_shelve:
-          my_shelve["my_shelve_dict"] = my_shelve_dict
-          my_shelve["num_documents"] = self.docCount
-          my_shelve["docID_to_URL"] = self.docID_to_url
+
+        total_size += os.path.getsize(f)
+        if total_size - last_size > 10*(2**20):           # every 10 MB
+          last_size = total_size
+          ts = time.time()
+          print(f"d_id: {docID}, time for last block: {ts - last_ts}, avg time per GB: {1.0 * (ts - start_time) / total_size * 2**30}", flush=True)     # 2^30 for gb 
+          #print()
+          last_ts = ts
+            
+      with shelve.open("dev.shelve") as my_shelve:
+        my_shelve["my_shelve_dict"] = my_shelve_dict
+        my_shelve["num_documents"] = self.docCount
+        my_shelve["docID_to_URL"] = self.docID_to_url
 
 
 
@@ -158,7 +163,7 @@ def generate_report(inverted_index_shelve_file, num_docs):
       f.write("Number of indexed documents: " + str(num_docs) + ". \n")
       f.write("Number of unique words: " + str(len(my_shelve["my_shelve_dict"]) - 1) + ". \n")         # -1 bc i store "num_unique_words"
       
-      file_size = os.path.getsize("analyst.shelve")                                  # get size of text file
+      file_size = os.path.getsize("dev.shelve")                                  # get size of text file
       f.write(f"Size of the inverted index: {file_size / 1024.0:.2f} KB.\n")
 
     with open(fname2, 'w') as f2:
@@ -171,18 +176,12 @@ def generate_report(inverted_index_shelve_file, num_docs):
       
 
 def main():
-  shelve_file = "analyst.shelve"
-  root_dir = "/home/czejda/cs121hw3/search_engine/ANALYST"
+  shelve_file = "dev.shelve"
+  root_dir = "/home/czejda/cs121hw3/search_engine/DEV"
   ii = InvertedIndex()
   ii.create_and_store_InvertedIndex(root_dir, shelve_file)
-  #generate_report(shelve_file, ii.docCount)
+  generate_report(shelve_file, ii.docCount)
 
 if __name__ == "__main__":
   main()
         
-
-
-
-
-
-    
