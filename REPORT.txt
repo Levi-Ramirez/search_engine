@@ -1,4 +1,4 @@
 REPORT: 
-Number of indexed documents: 20.
-Number of unique words: 117.
-Size of the inverted index: 0 KB.
+Number of indexed documents: 10091.
+Number of unique words: 26855.
+Size of the inverted index: 50998 KB.
