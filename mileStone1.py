@@ -157,7 +157,7 @@ def generate_inverted_index(token_locs, docID):
     except Exception as e:
         print(f"Error Generating Inverted Index {docID} : {str(e)}")
 
-def write_remainging_index():
+def write_remaining_index():
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
@@ -394,7 +394,7 @@ def launch_milestone_1():
         generate_inverted_index(token_locs, docID)
     
     # generate_report()
-    write_remainging_index()
+    write_remaining_index()
     merge_partial_indexes() #merges the partial indexes
     create_index_of_index() #creates index_of_index (global dictionary)
     if os.path.isfile("docID_urls.txt"):
