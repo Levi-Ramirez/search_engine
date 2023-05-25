@@ -369,6 +369,7 @@ def create_index_of_index():
 
 def launch_milestone_1():
     '''our main funciton.'''
+    print("Running MileStone 1...")
     # folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     folder_path = '/home/leviar/121/assign3/search_engine/DEV'
     paths = get_file_paths(folder_path)  # list of paths to all the files
@@ -400,6 +401,9 @@ def launch_milestone_1():
     if os.path.isfile("docID_urls.txt"):
         os.remove("docID_urls.txt")
     json.dump(docID_urls, open("docID_urls.txt", "w"))
+    
+    print("Done MileStone1!")
+
 
 
 # def launch_milestone_2():
@@ -427,7 +431,6 @@ def launch_milestone_1():
     
 
 if __name__ == '__main__':
-    print("Running...")
     launch_milestone_1()
 
     # launch_milestone_2()
