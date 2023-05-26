@@ -71,55 +71,6 @@ def read_large_line(file):
 
     return line
 
-
-# def generate_boolean_search_result(boolean_query_list):
-
-#     try:
-#         search_result_docIDs = set()
-#         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
-#         if len(boolean_query_list) == 0:
-#             return search_result_docIDs #return the empty set
-#         least_seen_word_object = boolean_query_list[0]
-#         # print("least seen word: ", least_seen_word_object)
-#         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
-#         # print("least_seen_word_object[least_seen_word]", least_seen_word_object[least_seen_word])
-#         # print(len(boolean_query_list))
-#         if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
-#             retSet = set()
-#             for posting in least_seen_word_object[least_seen_word]:
-#                 retSet.add(posting[0])
-#             return retSet
-
-#         # looping outer list of 2d array: [[4, [1826, 1917], 2]]
-#         for doc in least_seen_word_object[least_seen_word]:
-#             print("goes here")
-#             cur_doc_id = doc[0]  # [4, [1826, 1917], 2] => cur_doc_id = 4
-            
-#             # starting from index 1 because least_seen_word is at index 0
-#             for i in range(1, len(boolean_query_list)):
-#                 # {'day': [[1, [150], 1], [2, [150], 1], [3, [150], 1]]}
-#                 cur_word_object = boolean_query_list[i]
-#                 print("cur_word_object", cur_word_object)
-#                 cur_word = list(boolean_query_list[i].keys())[0]  # day
-
-#                 # [[1, [150], 1], [2, [150], 1], [3, [150], 1]]
-#                 for nxt_doc in cur_word_object[cur_word]:
-#                     nxt_doc_id = nxt_doc[0]
-#                     if nxt_doc_id == cur_doc_id:
-#                         search_result_docIDs.add(nxt_doc_id)
-#                         break
-#                     elif nxt_doc_id > cur_doc_id:
-#                         print("return found solutions")
-#                         # return set()  # bc no solution with boolean AND
-#                         return search_result_docIDs
-#                     # else continue. there might be a soluiton
-#         return search_result_docIDs
-
-#     except Exception as e:
-#         print('ERROR in generate_boolean_search_result: ', str(e))
-#         return set()
-
-
 def generate_boolean_search_result(boolean_query_list):
 
     try:
