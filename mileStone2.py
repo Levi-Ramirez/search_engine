@@ -178,7 +178,7 @@ def launch_milestone_2():
         docId_to_urls = json.load(open('docID_urls.txt'))
         # print('docId_to_urls', docId_to_gurls['data'])
         # print('index_of_inverted_index', index_of_inverted_index)
-
+        # print(docId_to_urls)
         query = input("Input your query: \n")
         query_tokens = handle_stopwords(tokenizer(query))
         # ^^ tokenize query and then return a list of tokens after handling the stopwords
@@ -223,6 +223,13 @@ def launch_milestone_2():
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:
             print('SEARCH RESULT ==> docIDs ', res)
+            # print('URLS: ')
+            # for docID in res:
+            #     if str(docID) in docId_to_urls:
+            #         print(docId_to_urls[str(docID)])
+            #     else:
+            #         print("THIS SHOULD NOT HAPPEN", docID)
+        # print(docId_to_urls)
 
     except Exception as e:
         print('ERROR launch_milestone_2: ', str(e))

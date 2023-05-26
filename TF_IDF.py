@@ -3,7 +3,7 @@
 import json
 
 def calculate_TF_IDF():
-    print('sup')
+    pass
 
 
 def read_large_line(file):
