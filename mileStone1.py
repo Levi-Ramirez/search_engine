@@ -400,6 +400,14 @@ def launch_milestone_1():
         generate_inverted_index(token_locs, docID)
 
     # generate_report()
+    
+    if os.path.isfile("total_doc_count.txt"):
+        os.remove("total_doc_count.txt")
+    
+    
+    total_doc_count = open("total_doc_count.txt", 'w')
+    total_doc_count.write(docID)
+    total_doc_count.close()
     write_remaining_index()
     merge_partial_indexes()  # merges the partial indexes
     create_index_of_index()  # creates index_of_index (global dictionary)
@@ -408,28 +416,6 @@ def launch_milestone_1():
     json.dump(docID_urls, open("docID_urls.txt", "w"))
 
 
-# def launch_milestone_2():
-#     userInput = input("Enter query:")
-#     print(userInput)
-#     listTokensInfo = []
-#     termList = tokenizer(userInput)
-#     print(termList)
-#     #AND only query process:
-
-#     # retrieve the queries
-#     full_index = open("full_index.txt", 'r')
-
-#     for x in termList:
-#         if x in index_of_index:
-#             #retrieve the term information, place it in a list of lists
-#             pos = index_of_index[x]
-#             full_index.seek(pos)
-#             curLine = full_index.readline()
-#             tempDict = json.loads(curLine)
-#             for token in tempDict:
-#                 listTokensInfo.append(tempDict[token])
-#     print(listTokensInfo)
-#     # find their intersection
 
 
 if __name__ == '__main__':
