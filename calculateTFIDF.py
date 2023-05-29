@@ -22,7 +22,7 @@ def calculate_tf_idf(index_obj, key, total_doc_count):
             #posting[1] = positions "key" found in docID 
             #len(posting[1]) = term_frequency
             # posting[2] = where we will put td-idf
-            tf = len(posting[2])
+            tf = posting[2]
 
             tf_idf = (1 + math.log(tf, 2)) * math.log((N / df), 2)
             # print('before: ', posting[2])

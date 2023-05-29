@@ -406,15 +406,13 @@ def launch_milestone_1():
     
     
     #TESTING CHANGE THIS PART TO NORMAL AFTER
-    # paths = get_file_paths(folder_path)  # list of paths to all the files #ACTUAL
-    paths = ['/home/mnadi/121/A3/search_engine/testing_dev_file.json'] #TESTING
+    paths = get_file_paths(folder_path)  # list of paths to all the files #ACTUAL
+    # paths = ['/home/mnadi/121/A3/search_engine/testing_dev_file.json'] #TESTING
     # TESTING. CHANGE THIS PART TO NORMAL AFTER
     
     
     global docID
-    print('paths', paths)
     for path in paths:
-        print('path', path)
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
