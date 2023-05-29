@@ -142,8 +142,8 @@ def write_to_file(thisFile, newDict):
 
 def generate_inverted_index(token_locs, docID, strong_word_count):
     '''this function generates/fills the inverted_index. Gets token_locs (key is a word and value is a list of the postions of that word) and docID as parameters, strong_word_count (dic of strong words and count).'''
-    print('strong_word_count', strong_word_count)
     
+
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
@@ -163,7 +163,16 @@ def generate_inverted_index(token_locs, docID, strong_word_count):
     try:
         for token in token_locs:
             # tfidf = round(count_tokens[token] / len(count_tokens), 4)
-            tfidf = len(token_locs[token]) + strong_word_count[token]
+            
+            tfidf = 0
+            
+            if token in strong_word_count and strong_word_count[token] > 0:
+                tfidf = len(token_locs[token]) + strong_word_count[token]
+                strong_word_count[token] -= 1
+            else:
+                tfidf = len(token_locs[token])
+                
+
             # post = Posting(docID, token_locs[token], tfidf)
             post = [docID, token_locs[token], tfidf]
             if token in inverted_index:
