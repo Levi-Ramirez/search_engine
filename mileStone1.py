@@ -12,7 +12,7 @@ import hashlib
 ''' the commented out libraries don't import correctly '''
 # from porter2stemmer import Porter2Stemmer
 # from simhash import Simhash
-import nltk
+from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer  # to stem
 # from nltk.tokenize import sent_tokenize, word_tokenize
 from stop_words import get_stop_words
@@ -43,6 +43,7 @@ index_of_index = {}
 # instead, lets try to define a list
 
 
+
 def tokenizer(page_text_content):
     '''this function gets text content of a site and tokenzie it. '''
     try:
@@ -61,16 +62,16 @@ def tokenizer(page_text_content):
                 cur_word = ""
         if len(cur_word) > 1:
             tokens.append(cur_word)
+        return tokens  
     except Exception as e:
         print(f"Error tokenizer: {str(e)}")
         return []
     # stemmed_tokens = [stemmer.stem(token) for token in tokens]
 
-    return tokens
 
 
 def get_file_text_content(file_path):
-    '''this function retuns the text content of a json file'''
+    '''this function returns the text content of a json file'''
 
     try:
         with open(file_path, 'r') as f:
@@ -78,10 +79,22 @@ def get_file_text_content(file_path):
             html_content = data['content']
             soup = BeautifulSoup(html_content, 'html.parser')
             text_content = soup.get_text()
-            return text_content if text_content else None
+            bold_word_counter = {}
+            for tag in soup.findAll():
+                tag_name = tag.name
+                tag_text_content = tag.get_text()
+                if tag_name == 'strong' or tag_name == 'h1' or tag_name == 'h2' or tag_name == 'h3': 
+                    for word in tokenizer(tag_text_content):
+                        if word in bold_word_counter:
+                            bold_word_counter[word] += 1
+                        else:
+                            bold_word_counter[word] = 1
+                        
+            return (text_content, bold_word_counter) if text_content else (None, bold_word_counter)
     except Exception as e:
         print(f"Error processing file {file_path}: {str(e)}")
-        return None
+        return (None, {})
+
 
 
 def read_large_line(file):
@@ -127,8 +140,10 @@ def write_to_file(thisFile, newDict):
         thisFile.write('\n')
 
 
-def generate_inverted_index(token_locs, docID):
-    '''this function generates/fills the inverted_index. Gets count_tokes and docID as parameters.'''
+def generate_inverted_index(token_locs, docID, strong_word_count):
+    '''this function generates/fills the inverted_index. Gets token_locs (key is a word and value is a list of the postions of that word) and docID as parameters, strong_word_count (dic of strong words and count).'''
+    print('strong_word_count', strong_word_count)
+    
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
@@ -148,7 +163,7 @@ def generate_inverted_index(token_locs, docID):
     try:
         for token in token_locs:
             # tfidf = round(count_tokens[token] / len(count_tokens), 4)
-            tfidf = len(token_locs[token])
+            tfidf = len(token_locs[token]) + strong_word_count[token]
             # post = Posting(docID, token_locs[token], tfidf)
             post = [docID, token_locs[token], tfidf]
             if token in inverted_index:
@@ -236,11 +251,14 @@ def merge_partial_indexes():
     tempCount = 0
     while tempCount < fileCount:
         # will be a list of dictionary entries represented by text
-        arrNextMinIndexesText.append(read_large_line(arrFiles[tempCount]))
-        # arrNextMinIndexesText.append(arrFiles[tempCount].readline()) #will be a list of dictionary entries represented by text
-        # will be a list of ACTUAL dictionary entries
-        arrNextMinIndexesDict.append(
-            json.loads(arrNextMinIndexesText[tempCount]))
+        tempStr = read_large_line(arrFiles[tempCount])
+        
+        if tempStr:
+            arrNextMinIndexesText.append(tempStr)
+            # arrNextMinIndexesText.append(arrFiles[tempCount].readline()) #will be a list of dictionary entries represented by text
+            # will be a list of ACTUAL dictionary entries
+            arrNextMinIndexesDict.append(
+                json.loads(arrNextMinIndexesText[tempCount]))
         tempCount += 1
     # minKey = getKey(arrNextMinIndexesText[0])
     while (True):
@@ -340,7 +358,6 @@ def generate_report():
 
             InvertedIndexTXT.write('] \n------------------------------\n')
 
-        file_path = 'path_to_your_file'  # Replace with the actual file path
 
         file_size = os.path.getsize(file2)
         file.write('Size of the inverted index: ' +
@@ -377,27 +394,33 @@ def launch_milestone_1():
     '''our main funciton.'''
     folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     # folder_path = '/home/leviar/121/assign3/search_engine/DEV'
-    paths = get_file_paths(folder_path)  # list of paths to all the files
+    
+    
+    #TESTING CHANGE THIS PART TO NORMAL AFTER
+    # paths = get_file_paths(folder_path)  # list of paths to all the files #ACTUAL
+    paths = ['/home/mnadi/121/A3/search_engine/testing_dev_file.json'] #TESTING
+    # TESTING. CHANGE THIS PART TO NORMAL AFTER
+    
+    
+    global docID
+    print('paths', paths)
     for path in paths:
-        global docID
-        # if docID >= 23:
-        #     break
-
-        # text_content of file located at path
-        text_content = get_file_text_content(path)
+        print('path', path)
+        text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
 
         # if this file is a duplicate, continue ^^^
 
         docID += 1
-        # assign docID to its proper URL // {docID : url}
-        map_docID_url(path, docID)
+        map_docID_url(path, docID) # assign docID to its proper URL // {docID : url}
         tokens = tokenizer(text_content)  # tokenize the text content
         # token_count = token_counter(tokens)  # count tokens
         token_locs = token_locator(tokens)  # get a list of token positions
         # fill/generate inverted index
-        generate_inverted_index(token_locs, docID)
+    
+
+        generate_inverted_index(token_locs, docID, bold_word_counter)
 
     # generate_report()
     
@@ -406,7 +429,7 @@ def launch_milestone_1():
     
     
     total_doc_count = open("total_doc_count.txt", 'w')
-    total_doc_count.write(docID)
+    total_doc_count.write(str(docID))
     total_doc_count.close()
     write_remaining_index()
     merge_partial_indexes()  # merges the partial indexes

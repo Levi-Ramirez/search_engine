@@ -22,7 +22,7 @@ def calculate_tf_idf(index_obj, key, total_doc_count):
             #posting[1] = positions "key" found in docID 
             #len(posting[1]) = term_frequency
             # posting[2] = where we will put td-idf
-            tf = len(posting[1])
+            tf = len(posting[2])
 
             tf_idf = (1 + math.log(tf, 2)) * math.log((N / df), 2)
             # print('before: ', posting[2])
@@ -50,23 +50,23 @@ def generate_full_index_tf_idf():
             os.remove("full_index_tf_idf.txt")
         full_index_tf_idf = open('full_index_tf_idf.txt', 'w')
 
-        testing_break = 0 #remove this
+        # testing_break = 0 #remove this
         
         while True:
-            if testing_break >= 1: #remove this
-                break
+            # if testing_break >= 1: #remove this
+                # break
 
             index_txt= read_large_line(full_index)
             if not index_txt: #if line is empty, end is reached, break
                 break
             index_obj = json.loads(index_txt) #{"000000000000003518": [[33278, [2697], 1]]}
-            keys = list(index_obj.keys())
-            key = keys[0]
+            key = list(index_obj.keys()) 
+            key = key[0] #key = '000000000000003518'
             index_obj_tf_idf = calculate_tf_idf(index_obj, key, total_doc_count)
 
             json.dump(index_obj_tf_idf, full_index_tf_idf)
             full_index_tf_idf.write('\n')
-            testing_break += 1 #remove this 
+            # testing_break += 1 #remove this 
         full_index_tf_idf.close()
         full_index.close()
     except Exception as e:
@@ -90,4 +90,6 @@ def read_large_line(file):
 
 
 if __name__ == '__main__':
+    print('running...')
     generate_full_index_tf_idf()
+    print('done')
