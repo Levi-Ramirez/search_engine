@@ -74,47 +74,46 @@ def read_large_line(file):
 def generate_boolean_search_result(boolean_query_list):
 
     try:
-        search_result_docIDs = []
+        intersection_docIDs = set()
+        intersection_postings = []
         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
-        if len(boolean_query_list) == 0:
-            return search_result_docIDs #return the empty set
         least_seen_word_object = boolean_query_list[0]
-        # print("least seen word: ", least_seen_word_object)
         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
-        # print("least_seen_word_object[least_seen_word]", least_seen_word_object[least_seen_word])
-        # print(len(boolean_query_list))
-        baseList = [] #baseList is the list of docID's that are in the least_seen_word
-        for posting in least_seen_word_object[least_seen_word]:
-                baseList.append(posting[0])
-        if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
-            return baseList
-        
-        print("this far")
-        for curTerm in boolean_query_list: #for every term in the query list
-            for token in curTerm: #should only be 1
-                i = 0
-                j = 0
-                while i < len(baseList): # for every element in the baselist
-                    #print("i: ", i)
-                    #print("baseList:", baseList)
-                    while j < len(curTerm[token]): # for every posting in the current term
-                        #print("j:", j)
-                        curPosting = curTerm[token][j] #note: curTerm[token][j] gives a posting, curPosting[0] gives the docID
-                        if curPosting[0] > baseList[i]: 
-                            del baseList[i]
-                            i -= 1 #decriment it because it will be incrimented later (an incriment + a delition will make it go forward two spots)
-                            if len(baseList) == 0:
-                                return baseList #return empty list if empty
-                            else:
-                                break #go to the next element in baselist (with the i+= below), keep current position in curTerm[token]
-                        elif curPosting[0] == baseList[i]:
-                            j += 1 #go to the next element in baselist (with the i+= below), incriment to next position in curTerm[token]
-                            break
-                        j += 1 #if nothing above, just incriment j to go to the next posting
 
-                    i += 1
-    
-        return baseList
+        # looping outher list of 2d array: [[4, [1826, 1917], 2]]
+        for post in least_seen_word_object[least_seen_word]:
+            cur_doc_id = post[0]  # [4, [1826, 1917], 2] => cur_doc_id = 4
+            if len(boolean_query_list) == 1:
+                return [cur_doc_id]
+            # starting from index 1 becasue least_seen_word is at index 0
+            for i in range(1, len(boolean_query_list)):
+                # {'day': [[1, [150], 1], [2, [150], 1], [3, [150], 1]]}
+                cur_word_object = boolean_query_list[i]
+                cur_word = list(boolean_query_list[i].keys())[0]  # day
+
+                # [[1, [150], 1], [2, [150], 1], [3, [150], 1]]
+                for nxt_post in cur_word_object[cur_word]:
+                    nxt_doc_id = nxt_post[0]
+                    if nxt_doc_id == cur_doc_id:
+                        if nxt_doc_id in intersection_docIDs:
+                            continue
+                        intersection_docIDs.add(nxt_doc_id)
+                        intersection_postings.append(nxt_post)
+                        break
+                    elif nxt_doc_id > cur_doc_id:
+                        return []  # bc no solution with boolean AND
+                    # else continue. there might be a soluiton
+        
+        ranked_posting_list = sorted(intersection_postings, key=lambda x: x[2], reverse=True)
+        print('ranked_posting_list', ranked_posting_list)
+        ranked_posting_docIDs = []
+        for post in ranked_posting_list:
+            ranked_posting_docIDs.append(post[0])
+        return ranked_posting_docIDs
+
+    except Exception as e:
+        print('ERROR in generate_boolean_search_result: ', str(e))
+        return []
                         
 
     except Exception as e:
@@ -125,7 +124,7 @@ def launch_milestone_2():
 
     try:
         # index_of_index_shelve = shelve.open("index_of_index.shelve")
-        index_of_index = json.load(open("index_of_index.txt"))
+        index_of_index = json.load(open("index_of_index_tf_idf.txt"))
         docId_to_urls = json.load(open('docID_urls.txt'))
         # print('docId_to_urls', docId_to_gurls['data'])
         # print('index_of_inverted_index', index_of_inverted_index)
@@ -137,22 +136,20 @@ def launch_milestone_2():
         boolean_query_list = []
         # term_being_searched: [post] => [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
 
-        full_index = open('full_index.txt', 'r')
+        # full_index = open('full_index_tf_idf.txt', 'r')
+        full_index = open('full_index_tf_idf.txt', 'r')
 
         print(query_tokens)
         # print('index_of_index', index_of_index)
         # print('docId_to_urls', docId_to_urls)
         for token in query_tokens:
-            print('token', token)
             if token in index_of_index:
                 pos = index_of_index[token]
-                print('pos', pos)
                 # {"11am": [[14, [501], 1]]}
                 full_index.seek(pos)
                 # line = full_index.readline()
                 line = read_large_line(full_index)
                 # print('line', line)
-                print('making file')
                 if os.path.isfile('err.txt'):
                     os.remove('err.txt')
                 file = open('err.txt', 'w')
@@ -168,19 +165,18 @@ def launch_milestone_2():
             boolean_query_list, key=lambda x: len(list(x.values())[0]))
         # [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
         #print(boolean_query_list)
-        print(len(boolean_query_list))
         res = generate_boolean_search_result(boolean_query_list)
+        # print('boolean_query_list: ', boolean_query_list)
         if len(res) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:
             print('SEARCH RESULT ==> docIDs ', res)
-            # print('URLS: ')
-            # for docID in res:
-            #     if str(docID) in docId_to_urls:
-            #         print(docId_to_urls[str(docID)])
-            #     else:
-            #         print("THIS SHOULD NOT HAPPEN", docID)
-        # print(docId_to_urls)
+            print('URLS: ')
+            for docID in res:
+                if str(docID) in docId_to_urls:
+                    print(docId_to_urls[str(docID)])
+                else:
+                    print("THIS SHOULD NOT HAPPEN", docID)
 
     except Exception as e:
         print('ERROR launch_milestone_2: ', str(e))

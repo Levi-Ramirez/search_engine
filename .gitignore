@@ -5,7 +5,6 @@ ingore/
 playground/
 docID_urls.shelve
 docID_urls.txt
-err.txt
 full_index2.txt
 full_index.txt
 index_of_index.shelve
@@ -27,3 +26,4 @@ temp.txt
 testing_index_tf_idf.txt
 oldstuff/
 full_index_tf_idf.txt
+index_of_index_tf_idf.txt
