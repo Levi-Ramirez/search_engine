@@ -18,9 +18,9 @@ import time
 class Posting:                          # one per term per document 
   def __init__(self, docID):
     self.docId = docID                  # number documents from 1-n
-    #self.tfidf = 0                     # use later, after all tfs and df's have been found: term frequency * inverse document frequency = (1 + log(tf)) * log(N / df)
+    self.tfidf = 0                      # use later, after all tfs and df's have been found: term frequency * inverse document frequency = (1 + log(tf)) * log(N / df)
     self.tf = 0                         # term freq (per document)
-    self.position_lst = list()          # set containing all positions that the term exists in document
+    #self.position_lst = list()          # set containing all positions that the term exists in document
     #self.fields = fields               # corresponding extent list piece (one for title, for bold, etc)
   
   def add(self, cur_word_pos):

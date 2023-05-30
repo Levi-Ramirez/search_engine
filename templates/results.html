@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title>Search Results</title>
+</head>
+<body>
+   <h2>Perform Another Search</h2>
+   <form action="{{ url_for('perform_search') }}" method="GET">
+       <input type="text" name="query" placeholder="Enter your search query" required>
+       <button type="submit">Search</button>
+   </form>
+
+   <h1>Search Results for "{{ query }}"</h1>
+   <ul>
+       {% for result in results %}
+           <li><a href="{{ result }}">{{ result }}</a></li>
+       {% endfor %}
+   </ul>
+
+   {% if results %}
+       {% if page > 1 %}
+           <a href="{{ url_for('perform_search', query=query, page=page-1)|replace('+', '%20') }}">Previous Page</a>
+       {% endif %}
+       {% if results|length >= 10 %}
+           <a href="{{ url_for('perform_search', query=query, page=page+1)|replace('+', '%20') }}">Next Page</a>
+       {% endif %}
+   {% endif %}
+</body>
+</html>
