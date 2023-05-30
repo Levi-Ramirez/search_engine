@@ -5,6 +5,7 @@ from nltk.stem import PorterStemmer
 import heapq
 import openai
 import json
+from bs4 import BeautifulSoup
 
 class Timer:
     def __init__(self):
@@ -105,10 +106,22 @@ class Search:
                     all_postings_list.append(json.loads(term_posting_list))         # add the list object into all_postings_list
         return self.calc_top_n(n, all_postings_list)
     
+    def get_text_from_json_file(self, file_path):
+        with open(file_path, 'r') as f:
+          json_data = json.load(f)     # read contents of file and converts it into a python dict or lists
+      
+        # use BS4 to get text content
+        html_content = json_data["content"]
+        soup = BeautifulSoup(html_content, 'html.parser')
+        soup.prettify()  # fix broken HTML
+        page_text_content = soup.get_text()
+        return page_text_content
+    
     def get_gpt_title_and_summary(self, docID):
-        openai.my_api_key = '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'
-        url = self.urls_dict[docID]
-        doc_text = ""
+        openai.api_key = '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'
+        file_path = self.json_file_paths[docID]
+        doc_text = self.get_text_from_json_file(file_path)
+
         messages_title = [  {"role": "system", "content": "give a brief title for this text: " + doc_text}  ]   # may not be necessary
         messages_summary = [  {"role": "system", "content": "give a brief summary for this text: " + doc_text}  ]
         
@@ -123,10 +136,19 @@ def main():
         start_t = time.time()
 
         top_5_tuples = s.search_for(user_query, 5)       # list of tuples, (tfidf, docID)
+
+        # old version
+        # print("Your top 5 results are:")
+        # for tfidf, docID in top_5_tuples:
+        #     print(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.urls_dict[str(docID)]}")
+        # print(f"Total time was {time.time() - start_t}\n")
+
+        # new version
         print("Your top 5 results are:")
         for tfidf, docID in top_5_tuples:
-            print(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.urls_dict[str(docID)]}")
-        print(f"Total time was {time.time() - start_t}\n")
+            title, summary = s.get_gpt_title_and_summary(docID)
+            print(f"{s.urls_dict[str(docID)]} \n{title} \n{summary}")   # url, then title, then summary
+
 
 if __name__ == "__main__":
     main()
