@@ -61,7 +61,7 @@ def tokenizer(page_text_content):
                 tokens.append(stemmer.stem(cur_word))
                 cur_word = ""
         if len(cur_word) > 1:
-            tokens.append(cur_word)
+            tokens.append(stemmer.stem(cur_word))
         return tokens  
     except Exception as e:
         print(f"Error tokenizer: {str(e)}")

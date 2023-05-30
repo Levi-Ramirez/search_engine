@@ -44,7 +44,7 @@ def calculate_tf_idf(index_obj, key, total_doc_count):
             # posting[2] = where we will put td-idf
             tf = posting[2]
 
-            tf_idf = (1 + math.log(tf, 2)) * math.log((N / df), 2)
+            tf_idf = round((1 + math.log(tf, 2)) * math.log((N / df), 2), 2)
             # print('before: ', posting[2])
             posting[2] = tf_idf
             # print('after: ', posting[2])

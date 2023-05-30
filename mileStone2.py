@@ -74,38 +74,47 @@ def read_large_line(file):
 def generate_boolean_search_result(boolean_query_list):
 
     try:
-        intersection_docIDs = set()
-        intersection_postings = []
+        search_result_docIDs = []
         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
+        if len(boolean_query_list) == 0:
+            return search_result_docIDs #return the empty set
         least_seen_word_object = boolean_query_list[0]
+        # print("least seen word: ", least_seen_word_object)
         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
-
-        # looping outher list of 2d array: [[4, [1826, 1917], 2]]
-        for post in least_seen_word_object[least_seen_word]:
-            cur_doc_id = post[0]  # [4, [1826, 1917], 2] => cur_doc_id = 4
-            if len(boolean_query_list) == 1:
-                return [cur_doc_id]
-            # starting from index 1 becasue least_seen_word is at index 0
-            for i in range(1, len(boolean_query_list)):
-                # {'day': [[1, [150], 1], [2, [150], 1], [3, [150], 1]]}
-                cur_word_object = boolean_query_list[i]
-                cur_word = list(boolean_query_list[i].keys())[0]  # day
-
-                # [[1, [150], 1], [2, [150], 1], [3, [150], 1]]
-                for nxt_post in cur_word_object[cur_word]:
-                    nxt_doc_id = nxt_post[0]
-                    if nxt_doc_id == cur_doc_id:
-                        if nxt_doc_id in intersection_docIDs:
-                            continue
-                        intersection_docIDs.add(nxt_doc_id)
-                        intersection_postings.append(nxt_post)
-                        break
-                    elif nxt_doc_id > cur_doc_id:
-                        return []  # bc no solution with boolean AND
-                    # else continue. there might be a soluiton
+        # print("least_seen_word_object[least_seen_word]", least_seen_word_object[least_seen_word])
+        # print(len(boolean_query_list))
+        baseList = [] #baseList is the list of docID's that are in the least_seen_word
+        for posting in least_seen_word_object[least_seen_word]:
+                baseList.append((posting[0], posting[2]))
+        if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
+            return baseList
         
-        ranked_posting_list = sorted(intersection_postings, key=lambda x: x[2], reverse=True)
-        print('ranked_posting_list', ranked_posting_list)
+        for curTerm in boolean_query_list: #for every term in the query list
+            for token in curTerm: #should only be 1
+                i = 0
+                j = 0
+                while i < len(baseList): # for every element in the baselist
+                    #print("i: ", i)
+                    #print("baseList:", baseList)
+                    while j < len(curTerm[token]): # for every posting in the current term
+                        #print("j:", j)
+                        curPosting = curTerm[token][j] #note: curTerm[token][j] gives a posting, curPosting[0] gives the docID
+                        if curPosting[0] > baseList[i][0]: 
+                            del baseList[i]
+                            i -= 1 #decriment it because it will be incrimented later (an incriment + a delition will make it go forward two spots)
+                            if len(baseList) == 0:
+                                return baseList #return empty list if empty
+                            else:
+                                break #go to the next element in baselist (with the i+= below), keep current position in curTerm[token]
+                        elif curPosting[0] == baseList[i][0]:
+                            j += 1 #go to the next element in baselist (with the i+= below), incriment to next position in curTerm[token]
+                            break
+                        j += 1 #if nothing above, just incriment j to go to the next posting
+
+                    i += 1
+    
+     
+        ranked_posting_list = sorted(baseList, key=lambda x: x[1], reverse=True)
         ranked_posting_docIDs = []
         for post in ranked_posting_list:
             ranked_posting_docIDs.append(post[0])
