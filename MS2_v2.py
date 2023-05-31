@@ -138,16 +138,16 @@ def main():
         top_5_tuples = s.search_for(user_query, 5)       # list of tuples, (tfidf, docID)
 
         # old version
-        # print("Your top 5 results are:")
-        # for tfidf, docID in top_5_tuples:
-        #     print(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.urls_dict[str(docID)]}")
-        # print(f"Total time was {time.time() - start_t}\n")
-
-        # new version
         print("Your top 5 results are:")
         for tfidf, docID in top_5_tuples:
-            title, summary = s.get_gpt_title_and_summary(docID)
-            print(f"{s.urls_dict[str(docID)]} \n{title} \n{summary}")   # url, then title, then summary
+            print(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.urls_dict[str(docID)]}")
+        print(f"Total time was {time.time() - start_t}\n")
+
+        # new version
+        # print("Your top 5 results are:")
+        # for tfidf, docID in top_5_tuples:
+        #     title, summary = s.get_gpt_title_and_summary(docID)
+        #     print(f"{s.urls_dict[str(docID)]} \n{title} \n{summary}")   # url, then title, then summary
 
 
 if __name__ == "__main__":

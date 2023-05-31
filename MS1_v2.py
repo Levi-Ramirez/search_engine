@@ -162,7 +162,27 @@ class InvertedIndex:
       #clearprint(term_posting_info)
     return term_posting_info
 
-  def merge_partial_indexes(self, dir_path):
+"""
+merge_partial_indexes(dir_path)
+    -- input: dir path where u can find all ur partial index files (each index file is sorted alphabetically alr by term)
+    -- output: a completed index on disk, which u have an index_of_index for (byte offsets into the completed_index)
+
+    steps:
+      1) find all indexX.txt files (X >= 0)
+      2) open all of these files, store their file ptrs into list
+      3) create min heap that will take tuples: (term, idx_of_fileptr, term_posting_info)
+        -- note: ordering within heap based on first element of tuple, aka term (so u will pop alphabetically smallest)
+      4) populate heap once using readline() on every partial index
+      5) pop once from heap, extract info, repopulate heap by adding another tuple
+        -- note: this new tuple is constructed by readline() on the fp of the tuple we just popped from heap
+      6) continue this process for cur_term, once we reach a new term, write the concatenated posting list for the cur_term to disk
+        -- note: posting list will now contain [docID, tfidf], not [docID, tf], this is an intermediate step here that i'll gloss over
+        -- note: this is where u wanna calc byte_offset into the complete_index
+      7) once you reach eof (aka "not line" after readline()), then u don't add to heap
+      8) perform above steps until heap is empty, should have completed index file on disk + index_of_index
+"""
+
+def merge_partial_indexes(self, dir_path):
     # go into dir path, find all files of name indexX.txt, where X >= 0
     files = os.listdir(dir_path)
     file_pointers = list()          # extract lines one at a time from each of these open files

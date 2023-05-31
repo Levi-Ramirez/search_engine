@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request
-#from mileStone1 import posting
-#from MS2 import Timer
-#from MS2 import Search
+from MS1_v2 import InvertedIndex    
+from MS2_v2 import Search
+import time
 
 app = Flask(__name__)
 
@@ -12,7 +12,7 @@ def home():
 @app.route('/search', methods=['GET', 'POST'])
 def perform_search():
     query = request.args.get('query')
-    all_results = perform_actual_search(query)
+    all_results = perform_actual_search(str(query))
 
     # Pagination
     page = request.args.get('page', 1, type=int)
@@ -27,40 +27,16 @@ def perform_search():
 
 def perform_actual_search(query):
     # Dummy URLs for demonstration
-    dummy_urls = [
-        "https://example.com/page1",
-        "https://example.com/page2",
-        "https://example.com/page3",
-        "https://example.com/page4",
-        "https://example.com/page5",
-        "https://example.com/page6",
-        "https://example.com/page7",
-        "https://example.com/page8",
-        "https://example.com/page9",
-        "https://example.com/page10",
-        "https://example.com/page11",
-        "https://example.com/page12",
-        "https://example.com/page13",
-    ]
-    return dummy_urls
-'''
-def main():
-    #query = "nearli"
-    index_shelve_file = "dev.shelve"
-    
-    
-    with shelve.open(index_shelve_file, 'r') as my_shelve:    # open index shelve
-        
-        s = Search(my_shelve)
-        while True:
-            user_query = input("Search for: ")
-            start_t = time.time()
+    s = Search()
+    top_5_tuples = s.search_for(query, 5)       # list of tuples, (tfidf, docID)
 
-            top_5_tuples = s.search_for(user_query, 5)       # list of tuples, (tfidf, docID)
-            print("Your top 5 results are:")
-            for tfidf, docID in top_5_tuples:
-                print(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.URLs[docID]}")
-            print(f"Total time was {time.time() - start_t}\n")
-'''
+    res = list()
+    res.append("Your top 5 results are:")
+    for tfidf, docID in top_5_tuples:
+        #res.append(f"DocID: {docID}, Tfidf: {tfidf}, URL: {s.urls_dict[str(docID)]}")
+        res.append(s.urls_dict[str(docID)])
+        print(s.urls_dict[str(docID)])
+    return res
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
