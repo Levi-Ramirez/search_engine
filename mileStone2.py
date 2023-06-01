@@ -115,6 +115,7 @@ def generate_boolean_search_result(boolean_query_list):
     
      
         ranked_posting_list = sorted(baseList, key=lambda x: x[1], reverse=True)
+        # print('ranked_posting_list', ranked_posting_list)
         ranked_posting_docIDs = []
         for post in ranked_posting_list:
             ranked_posting_docIDs.append(post[0])
