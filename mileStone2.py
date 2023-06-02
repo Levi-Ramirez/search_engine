@@ -132,7 +132,7 @@ def read_large_line(file):
 
 #MOST RECENT MODIFICATIONS BELOW
 def generate_boolean_search_result(boolean_query_list):
-
+ 
     try:
         search_result_docIDs = []
         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
