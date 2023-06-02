@@ -279,10 +279,6 @@ def generate_boolean_search_result(boolean_query_list):
 #         return baseList
                         
 
-    except Exception as e:
-        print('ERROR in generate_boolean_search_result: ', str(e))
-        return []
-
 def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query document result
     '''returns a list of lists [[docID-1, tfidf-1], [docID-2, tfidf-2]] in order of decreasing tfidf'''
     doc_ngram_count = []
