@@ -50,9 +50,9 @@ class InvertedIndex:
 
         # get important fields (headings h, bolded b, and strong)
         # add more occurrences of them to boost
-        important_h_b_strong = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'b', 'strong'])
+        important_h_b_strong = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'b', 'strong', 'title'])
         for tag in important_h_b_strong:
-          if '<h1' in tag:
+          if '<h1' in tag or '<title' in tag:
             page_text_content += (tag.text * 100)          # remember, this increases tf, which we take log_10 of later
           elif '<h2' in tag:
             page_text_content += (tag.text * 50)
@@ -81,19 +81,22 @@ class InvertedIndex:
   def create_postings(self, docID, tokens):
     # Note: THIS IS FOR ONE DOCUMENT (but all terms within)
     dict_term_to_posting = dict()
+    #num_tokens = len(tokens)                                             # document length (divide tf by doc_len)
     for t in tokens:          # go thru list of tokens
       if t not in dict_term_to_posting:
         dict_term_to_posting[t] = [docID, 0]           # list of 2
       dict_term_to_posting[t][1] += 1
 
-    return dict_term_to_posting          # this is a dictionary, key=term, val=list of [docID, tf]
+    # for t in dict_term_to_posting:
+    #   dict_term_to_posting[t] = 1.0 * dict_term_to_posting[t] / num_tokens     # divide tf by doc_len, "normalizes" large docs with lots of occurrences of a specific term
+    return dict_term_to_posting                                                # this is a dictionary, key=term, val=list of [docID, tf]
 
 
   def create_and_store_partial_indexes(self, root_dir):
     json_file_paths = self.get_json_file_paths(root_dir)
     with open("file_paths.txt", "w") as fps:               # index of each file path = docID
       json.dump(json_file_paths, fps)
-    current_partial_index_dict = dict()                        # partial index that will be stored to disk, key = term, val = list of lists, first element isn't a list, it's the term string, followed by inner lists: [docID_list, tf]
+    current_partial_index_dict = dict()                    # partial index that will be stored to disk, key = term, val = list of lists, first element isn't a list, it's the term string, followed by inner lists: [docID_list, tf]
 
     # to check speed of indexing
     # start_time = time.time()
@@ -162,27 +165,7 @@ class InvertedIndex:
       #clearprint(term_posting_info)
     return term_posting_info
 
-"""
-merge_partial_indexes(dir_path)
-    -- input: dir path where u can find all ur partial index files (each index file is sorted alphabetically alr by term)
-    -- output: a completed index on disk, which u have an index_of_index for (byte offsets into the completed_index)
-
-    steps:
-      1) find all indexX.txt files (X >= 0)
-      2) open all of these files, store their file ptrs into list
-      3) create min heap that will take tuples: (term, idx_of_fileptr, term_posting_info)
-        -- note: ordering within heap based on first element of tuple, aka term (so u will pop alphabetically smallest)
-      4) populate heap once using readline() on every partial index
-      5) pop once from heap, extract info, repopulate heap by adding another tuple
-        -- note: this new tuple is constructed by readline() on the fp of the tuple we just popped from heap
-      6) continue this process for cur_term, once we reach a new term, write the concatenated posting list for the cur_term to disk
-        -- note: posting list will now contain [docID, tfidf], not [docID, tf], this is an intermediate step here that i'll gloss over
-        -- note: this is where u wanna calc byte_offset into the complete_index
-      7) once you reach eof (aka "not line" after readline()), then u don't add to heap
-      8) perform above steps until heap is empty, should have completed index file on disk + index_of_index
-"""
-
-def merge_partial_indexes(self, dir_path):
+  def merge_partial_indexes(self, dir_path):
     # go into dir path, find all files of name indexX.txt, where X >= 0
     files = os.listdir(dir_path)
     file_pointers = list()          # extract lines one at a time from each of these open files
@@ -304,3 +287,23 @@ def main(mode):
 if __name__ == "__main__":
   main(sys.argv[1])
         
+
+"""
+merge_partial_indexes(dir_path)
+    -- input: dir path where u can find all ur partial index files (each index file is sorted alphabetically alr by term)
+    -- output: a completed index on disk, which u have an index_of_index for (byte offsets into the completed_index)
+
+    steps:
+      1) find all indexX.txt files (X >= 0)
+      2) open all of these files, store their file ptrs into list
+      3) create min heap that will take tuples: (term, idx_of_fileptr, term_posting_info)
+        -- note: ordering within heap based on first element of tuple, aka term (so u will pop alphabetically smallest)
+      4) populate heap once using readline() on every partial index
+      5) pop once from heap, extract info, repopulate heap by adding another tuple
+        -- note: this new tuple is constructed by readline() on the fp of the tuple we just popped from heap
+      6) continue this process for cur_term, once we reach a new term, write the concatenated posting list for the cur_term to disk
+        -- note: posting list will now contain [docID, tfidf], not [docID, tf], this is an intermediate step here that i'll gloss over
+        -- note: this is where u wanna calc byte_offset into the complete_index
+      7) once you reach eof (aka "not line" after readline()), then u don't add to heap
+      8) perform above steps until heap is empty, should have completed index file on disk + index_of_index
+"""

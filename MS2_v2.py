@@ -135,7 +135,7 @@ def main():
         user_query = input("Search for: ")
         start_t = time.time()
 
-        top_5_tuples = s.search_for(user_query, 5)       # list of tuples, (tfidf, docID)
+        top_5_tuples = s.search_for(user_query, 20)       # list of tuples, (tfidf, docID)
 
         # old version
         print("Your top 5 results are:")
