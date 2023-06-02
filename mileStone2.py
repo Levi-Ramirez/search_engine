@@ -71,55 +71,6 @@ def read_large_line(file):
 
     return line
 
-
-# def generate_boolean_search_result(boolean_query_list):
-
-#     try:
-#         search_result_docIDs = set()
-#         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
-#         if len(boolean_query_list) == 0:
-#             return search_result_docIDs #return the empty set
-#         least_seen_word_object = boolean_query_list[0]
-#         # print("least seen word: ", least_seen_word_object)
-#         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
-#         # print("least_seen_word_object[least_seen_word]", least_seen_word_object[least_seen_word])
-#         # print(len(boolean_query_list))
-#         if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
-#             retSet = set()
-#             for posting in least_seen_word_object[least_seen_word]:
-#                 retSet.add(posting[0])
-#             return retSet
-
-#         # looping outer list of 2d array: [[4, [1826, 1917], 2]]
-#         for doc in least_seen_word_object[least_seen_word]:
-#             print("goes here")
-#             cur_doc_id = doc[0]  # [4, [1826, 1917], 2] => cur_doc_id = 4
-            
-#             # starting from index 1 because least_seen_word is at index 0
-#             for i in range(1, len(boolean_query_list)):
-#                 # {'day': [[1, [150], 1], [2, [150], 1], [3, [150], 1]]}
-#                 cur_word_object = boolean_query_list[i]
-#                 print("cur_word_object", cur_word_object)
-#                 cur_word = list(boolean_query_list[i].keys())[0]  # day
-
-#                 # [[1, [150], 1], [2, [150], 1], [3, [150], 1]]
-#                 for nxt_doc in cur_word_object[cur_word]:
-#                     nxt_doc_id = nxt_doc[0]
-#                     if nxt_doc_id == cur_doc_id:
-#                         search_result_docIDs.add(nxt_doc_id)
-#                         break
-#                     elif nxt_doc_id > cur_doc_id:
-#                         print("return found solutions")
-#                         # return set()  # bc no solution with boolean AND
-#                         return search_result_docIDs
-#                     # else continue. there might be a soluiton
-#         return search_result_docIDs
-
-#     except Exception as e:
-#         print('ERROR in generate_boolean_search_result: ', str(e))
-#         return set()
-
-
 def generate_boolean_search_result(boolean_query_list):
 
     try:
@@ -170,6 +121,73 @@ def generate_boolean_search_result(boolean_query_list):
         print('ERROR in generate_boolean_search_result: ', str(e))
         return []
 
+def docOrder(query_docs, boolean_query_list): #query term list, query document result
+    '''returns a list of lists [[docID-1, tfidf-1], [docID-2, tfidf-2]] in order of decreasing tfidf'''
+    doc_ngram_count = []
+    for docID in query_docs:
+        partial_ngrams = nGramDoc(docID, boolean_query_list) #returns an int of the number of partial ngrams found
+        doc_ngram_count.append([docID, partial_ngrams])
+    return doc_ngram_count
+
+
+#returns an int of the number of partial ngrams found
+def nGramDoc(docID, boolean_query_list):
+    print("nGramDoc:")
+    tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each document)
+    tfidfScore = 0
+    for posting_list in boolean_query_list:
+        found = False
+        for token in posting_list: #should only be 1
+            for posting in posting_list[token]:
+                if posting[0] == docID: #when you find the docID for this posting, return its list of positions
+                    found = True
+                    tokenPosInDoc.append(posting[1]) #get its positions in this document
+                    tfidfScore = posting[2] #get its current tfidf
+                    break
+            if found:
+                break
+    print("tokenPosInDoc: ", tokenPosInDoc)
+    indexPos = [0] * len(tokenPosInDoc) #indexPos is the current index you are looking at for that token in this document
+    count = 0 #count is the number of times you found sequential words in the order of which they were entered
+    lastIndex = len(indexPos) - 1 #save the last index
+
+    minIndex = getMinIndex(indexPos, tokenPosInDoc)
+    while(True):
+        # if lastIndex == minIndex:
+        #     indexPos[minIndex] += 1 #incriment the next minimum index of this term
+        #     minIndex = getMinIndex(indexPos, tokenPosInDoc)
+        if lastIndex != minIndex and tokenPosInDoc[minIndex][indexPos[minIndex]] - tokenPosInDoc[minIndex + 1][indexPos[minIndex + 1]] == 1:
+            count += 1
+            indexPos[minIndex] += 1 #incriment the next minimum index of this term
+            if(len(tokenPosInDoc[minIndex]) <= indexPos[minIndex]): #if it reached the end of this list, break cuz the query n-gram is not not relavent
+                break
+                
+            minIndex += 1 #make the minIndex one more as the next term is shown to follow this one
+        else: #if the index after it is not the next word in the query and it is not the last index, then incriment the current term and compute the next index
+            indexPos[minIndex] += 1 #incriment the next minimum index of this term
+            if(len(tokenPosInDoc[minIndex]) <= indexPos[minIndex]): #if it reached the end of this list, break cuz the query n-gram is not not relavent
+                break
+            minIndex = getMinIndex(indexPos, tokenPosInDoc)
+    return count
+
+        
+
+        
+
+def getMinIndex(indexPos, tokenPosInDoc):
+    i = 0
+    minIndex = 0
+    curMinVal = 0
+    while i < len(indexPos):
+        if tokenPosInDoc[i][indexPos[i]] < curMinVal:
+            curMinVal = tokenPosInDoc[i][indexPos[i]] 
+            minIndex = i
+        i += 1
+    
+    return minIndex
+
+
+
 def launch_milestone_2():
 
     try:
@@ -178,7 +196,7 @@ def launch_milestone_2():
         docId_to_urls = json.load(open('docID_urls.txt'))
         # print('docId_to_urls', docId_to_gurls['data'])
         # print('index_of_inverted_index', index_of_inverted_index)
-
+        # print(docId_to_urls)
         query = input("Input your query: \n")
         query_tokens = handle_stopwords(tokenizer(query))
         # ^^ tokenize query and then return a list of tokens after handling the stopwords
@@ -217,15 +235,25 @@ def launch_milestone_2():
             boolean_query_list, key=lambda x: len(list(x.values())[0]))
         # [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
         #print(boolean_query_list)
-        print(len(boolean_query_list))
-        res = generate_boolean_search_result(boolean_query_list)
-        if len(res) == 0:
+        print("bool_query_list len: ", len(boolean_query_list))
+        #print("bool_query_list: ", boolean_query_list)
+        query_docs = generate_boolean_search_result(boolean_query_list) #res is the docID's which gets all of the docs that contain the terms in the boolean_query_list
+        #nGram the list and return them and their weights by assorted order
+        print(docOrder(query_docs, boolean_query_list)) #query term list, query document result
+        if len(query_docs) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:
-            print('SEARCH RESULT ==> docIDs ', res)
+            print("nothing")
+            # print('SEARCH RESULT ==> docIDs ', query_docs)
+            # print('URLS: ')
+            # for docID in res:
+            #     if str(docID) in docId_to_urls:
+            #         print(docId_to_urls[str(docID)])
+            #     else:
+            #         print("THIS SHOULD NOT HAPPEN", docID)
+        # print(docId_to_urls)
 
     except Exception as e:
         print('ERROR launch_milestone_2: ', str(e))
-
 
 launch_milestone_2()
