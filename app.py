@@ -2,7 +2,9 @@ from flask import Flask, render_template, request
 #from mileStone1 import posting
 #from MS2 import Timer
 #from MS2 import Search
-
+import mileStone1
+import mileStone2
+from mileStone2 import launch_milestone_2
 app = Flask(__name__)
 
 @app.route('/')
@@ -26,22 +28,11 @@ def perform_search():
 
 
 def perform_actual_search(query):
-    # Dummy URLs for demonstration
-    dummy_urls = [
-        "https://example.com/page1",
-        "https://example.com/page2",
-        "https://example.com/page3",
-        "https://example.com/page4",
-        "https://example.com/page5",
-        "https://example.com/page6",
-        "https://example.com/page7",
-        "https://example.com/page8",
-        "https://example.com/page9",
-        "https://example.com/page10",
-        "https://example.com/page11",
-        "https://example.com/page12",
-        "https://example.com/page13",
-    ]
+    # Dummy URLs for demonstratio
+    dummy_urls = launch_milestone_2(query)
+    if len(dummy_urls) == 0:
+        dummy_urls.append("NoResults")
+    
     return dummy_urls
 '''
 def main():
