@@ -94,7 +94,7 @@ def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
         return ranked_posting_docIDs
 
     except Exception as e:
-        print('ERROR in generate_boolean_search_result: ', str(e))
+        print('ERROR in generate_boolean_or_search_result: ', str(e))
         return []
     
 
@@ -155,9 +155,6 @@ def generate_boolean_and_search_result(boolean_query_list):
         return ([], set())
                         
 
-    except Exception as e:
-        print('ERROR in generate_boolean_search_result: ', str(e))
-        return []
 
 
 def display_result(search_result, docId_to_urls):
