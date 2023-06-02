@@ -75,7 +75,11 @@ def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
     
     try:
         posting_union = []
+        limit = 0
+        
         for index_obj in boolean_query_list: #index_obj = {'shindler': [[1948, [1065], 11.18], [3962, [133], 11.18], [6197, [37], 33.53], [7084, [82], 11.18], [7355, [92], 11.18], [8487, [20], 33.53], [9391, [32], 11.18], [11356, [31], 33.53], [17341, [58], 11.18]]}
+            if limit >= 50:
+                break
             token = list(index_obj.keys())[0] # token = 'shindler'
             
             for posting in index_obj[token]:
@@ -159,9 +163,8 @@ def generate_boolean_and_search_result(boolean_query_list):
 
 def display_result(search_result, docId_to_urls):
     for docID in search_result:
-        if str(docID) in docId_to_urls:
-            # print(str(docID), ' : ', docId_to_urls[str(docID)])
-            print(docId_to_urls[str(docID)])
+        if str(docID[0]) in docId_to_urls:
+            print(docId_to_urls[str(docID[0])])
         else:
             print("THIS SHOULD NOT HAPPEN", docID)
 def launch_milestone_2():
@@ -224,12 +227,12 @@ def launch_milestone_2():
         if the res is still very little, do the boolean query with OR WITH the stop words
         '''
         
-        # print('boolean_query_list: ', boolean_query_list)
         if len(boolean_and_res) + len(boolean_or_res) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:
             print('SEARCH RESULT: ')
             display_result(boolean_and_res, docId_to_urls)
+            print('-------OR--------')
             display_result(boolean_or_res, docId_to_urls)
 
     except Exception as e:
