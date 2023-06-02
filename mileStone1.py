@@ -410,9 +410,10 @@ def launch_milestone_1():
     # paths = ['/home/mnadi/121/A3/search_engine/testing_dev_file.json'] #TESTING
     # TESTING. CHANGE THIS PART TO NORMAL AFTER
     
-    
+    count = 0
     global docID
     for path in paths:
+        count += 1
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
@@ -428,6 +429,7 @@ def launch_milestone_1():
     
 
         generate_inverted_index(token_locs, docID, bold_word_counter)
+        if count == 1000: break
 
     # generate_report()
     
