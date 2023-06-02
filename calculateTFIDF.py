@@ -5,6 +5,26 @@ import os
 
 import math
 
+def create_index_of_index():
+    full_index = open("full_index_tf_idf.txt", 'r')
+    index_of_index = {}
+    while True:
+        pos = full_index.tell()
+        curLine = read_large_line(full_index)
+        # curLine = full_index.readline()
+        if not curLine:
+            break  # need to break here!
+        tempDict = json.loads(curLine)
+        for token in tempDict:
+            if token in index_of_index:
+                print("error, index shouldn't already exist")
+            else:
+                index_of_index[token] = pos
+
+    if os.path.isfile("index_of_index_tf_idf.txt"):
+        os.remove("index_of_index_tf_idf.txt")
+    json.dump(index_of_index, open("index_of_index_tf_idf.txt", "w"))
+    
 
 def calculate_tf_idf(index_obj, key, total_doc_count):
     '''
@@ -22,9 +42,9 @@ def calculate_tf_idf(index_obj, key, total_doc_count):
             #posting[1] = positions "key" found in docID 
             #len(posting[1]) = term_frequency
             # posting[2] = where we will put td-idf
-            tf = len(posting[2])
+            tf = posting[2]
 
-            tf_idf = (1 + math.log(tf, 2)) * math.log((N / df), 2)
+            tf_idf = round((1 + math.log(tf, 2)) * math.log((N / df), 2), 2)
             # print('before: ', posting[2])
             posting[2] = tf_idf
             # print('after: ', posting[2])
@@ -92,4 +112,5 @@ def read_large_line(file):
 if __name__ == '__main__':
     print('running...')
     generate_full_index_tf_idf()
+    create_index_of_index()
     print('done')
