@@ -302,6 +302,7 @@ def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query do
 def nGramDoc(docID, boolean_query_list):
     #print("nGramDoc:")
     tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each term in the document)
+
     tfidfScore = 0
     for posting_list in boolean_query_list:
         found = False
