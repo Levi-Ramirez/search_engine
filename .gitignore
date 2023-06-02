@@ -27,3 +27,8 @@ testing_index_tf_idf.txt
 oldstuff/
 full_index_tf_idf.txt
 index_of_index_tf_idf.txt
+mine/
+docID_urls_simhash.txt
+duplicate_pages.txt
+full_index_simhash.txt
+index_of_index_simhash.txt

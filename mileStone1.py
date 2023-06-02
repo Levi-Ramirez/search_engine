@@ -17,6 +17,8 @@ from nltk.stem import PorterStemmer  # to stem
 # from nltk.tokenize import sent_tokenize, word_tokenize
 from stop_words import get_stop_words
 import shelve
+from simhash import Simhash
+
 
 
 '''
@@ -32,7 +34,7 @@ docID = 0
 inverted_index = {}
 docID_urls = {}
 index_of_index = {}
-
+simhash_scores = [] #list of simhash object for all the documents. to detect the pages with duplicate content
 
 # class Posting:
 #     def __init__(self, docID, token_locs, tfidf):
@@ -71,7 +73,7 @@ def tokenizer(page_text_content):
 
 
 def get_file_text_content(file_path):
-    '''this function returns the text content of a json file'''
+    '''this function returns the text content of a json file and counter for bold words'''
 
     try:
         with open(file_path, 'r') as f:
@@ -83,12 +85,22 @@ def get_file_text_content(file_path):
             for tag in soup.findAll():
                 tag_name = tag.name
                 tag_text_content = tag.get_text()
-                if tag_name == 'strong' or tag_name == 'h1' or tag_name == 'h2' or tag_name == 'h3': 
+                increment_by = 0 # will have different weight for different tags.
+                if tag_name == 'h1':
+                    increment_by = 4
+                elif tag_name == 'h2':
+                    increment_by = 3
+                elif tag_name == 'h3':
+                    increment_by = 2
+                elif tag_name == 'h4' or tag_name == 'h5' or tag_name == 'h6' or tag_name == 'stong':
+                    increment_by = 1
+                
+                if increment_by != 0: # if increment_by is zero, then we did not find an important tag
                     for word in tokenizer(tag_text_content):
                         if word in bold_word_counter:
-                            bold_word_counter[word] += 1
+                            bold_word_counter[word] += increment_by
                         else:
-                            bold_word_counter[word] = 1
+                            bold_word_counter[word] = increment_by
                         
             return (text_content, bold_word_counter) if text_content else (None, bold_word_counter)
     except Exception as e:
@@ -379,6 +391,21 @@ def generate_report():
             f"Error Generating Report: {str(e)}")
 
 
+def is_duplicate_content(text_content):
+    '''
+    is_duplicate_content: if we add a page with similar content, return true
+    '''
+    global simhash_scores #simhash objects
+    
+    finger_print = Simhash(text_content)
+    for other_fingerprint in simhash_scores:  # loop through each one        
+        similarity = finger_print.distance(other_fingerprint) # see if they are similar
+        if similarity <= 9: # 0 = 100 % same, 64 = 0 % same ||||| ran 17, 30, 12, 15, 13 (13 gave 11k) (never finished 12 thinking it got into a trap. it may or may not be true)
+            return True #if they are similar, return True
+
+    simhash_scores.append(finger_print)
+    return False
+
 def create_index_of_index():
     full_index = open("full_index.txt", 'r')
     while True:
@@ -404,6 +431,9 @@ def launch_milestone_1():
     folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     # folder_path = '/home/leviar/121/assign3/search_engine/DEV'
     
+    if os.path.isfile("duplicate_pages.txt"):
+        os.remove("duplicate_pages.txt")
+    
     
     #TESTING CHANGE THIS PART TO NORMAL AFTER
     paths = get_file_paths(folder_path)  # list of paths to all the files #ACTUAL
@@ -411,14 +441,20 @@ def launch_milestone_1():
     # TESTING. CHANGE THIS PART TO NORMAL AFTER
     
     
+    duplicate_pages_txt = open('duplicate_pages.txt', 'w')
     global docID
     for path in paths:
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
-
-        # if this file is a duplicate, continue ^^^
-
+        if is_duplicate_content(text_content): # if we have a page with really similar content of this current document, we will not add to the index.
+            with open(path, 'r') as f:
+                data = json.load(f)
+                url = data['url']
+                duplicate_pages_txt.write(url)
+                duplicate_pages_txt.write('\n')
+            continue
+        
         docID += 1
         map_docID_url(path, docID) # assign docID to its proper URL // {docID : url}
         tokens = tokenizer(text_content)  # tokenize the text content
@@ -441,6 +477,7 @@ def launch_milestone_1():
     write_remaining_index()
     merge_partial_indexes()  # merges the partial indexes
     create_index_of_index()  # creates index_of_index (global dictionary)
+    duplicate_pages_txt.close()
     if os.path.isfile("docID_urls.txt"):
         os.remove("docID_urls.txt")
     json.dump(docID_urls, open("docID_urls.txt", "w"))

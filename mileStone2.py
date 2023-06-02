@@ -71,13 +71,40 @@ def read_large_line(file):
 
     return line
 
-def generate_boolean_search_result(boolean_query_list):
+def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
+    
+    try:
+        posting_union = []
+        for index_obj in boolean_query_list: #index_obj = {'shindler': [[1948, [1065], 11.18], [3962, [133], 11.18], [6197, [37], 33.53], [7084, [82], 11.18], [7355, [92], 11.18], [8487, [20], 33.53], [9391, [32], 11.18], [11356, [31], 33.53], [17341, [58], 11.18]]}
+            token = list(index_obj.keys())[0] # token = 'shindler'
+            
+            for posting in index_obj[token]:
+                docID = posting[0]
+                if docID not in intersection_docIDs:
+                    posting_union.append(posting)
+                    intersection_docIDs.add(docID)
+
+        postings_union_ranked = sorted(posting_union, key=lambda x: x[2], reverse=True)
+        
+        ranked_posting_docIDs = []
+        
+        for posting in postings_union_ranked:
+            ranked_posting_docIDs.append(posting[0]) #pushing docID 
+            
+        return ranked_posting_docIDs
+
+    except Exception as e:
+        print('ERROR in generate_boolean_search_result: ', str(e))
+        return []
+    
+
+
+def generate_boolean_and_search_result(boolean_query_list):
 
     try:
-        search_result_docIDs = []
         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
         if len(boolean_query_list) == 0:
-            return search_result_docIDs #return the empty set
+            return ([], set() )#return the empty list
         least_seen_word_object = boolean_query_list[0]
         # print("least seen word: ", least_seen_word_object)
         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
@@ -87,7 +114,7 @@ def generate_boolean_search_result(boolean_query_list):
         for posting in least_seen_word_object[least_seen_word]:
                 baseList.append((posting[0], posting[2]))
         if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
-            return baseList
+            return (baseList, set())
         
         for curTerm in boolean_query_list: #for every term in the query list
             for token in curTerm: #should only be 1
@@ -103,7 +130,7 @@ def generate_boolean_search_result(boolean_query_list):
                             del baseList[i]
                             i -= 1 #decriment it because it will be incrimented later (an incriment + a delition will make it go forward two spots)
                             if len(baseList) == 0:
-                                return baseList #return empty list if empty
+                                return (baseList, set()) #return empty list if empty
                             else:
                                 break #go to the next element in baselist (with the i+= below), keep current position in curTerm[token]
                         elif curPosting[0] == baseList[i][0]:
@@ -117,37 +144,49 @@ def generate_boolean_search_result(boolean_query_list):
         ranked_posting_list = sorted(baseList, key=lambda x: x[1], reverse=True)
         # print('ranked_posting_list', ranked_posting_list)
         ranked_posting_docIDs = []
+        intersetion_docIDs = set()
         for post in ranked_posting_list:
             ranked_posting_docIDs.append(post[0])
-        return ranked_posting_docIDs
+            intersetion_docIDs.add(post[0])
+        return (ranked_posting_docIDs, intersetion_docIDs)
 
     except Exception as e:
         print('ERROR in generate_boolean_search_result: ', str(e))
-        return []
+        return ([], set())
                         
 
     except Exception as e:
         print('ERROR in generate_boolean_search_result: ', str(e))
         return []
 
+
+def display_result(search_result, docId_to_urls):
+    for docID in search_result:
+        if str(docID) in docId_to_urls:
+            # print(str(docID), ' : ', docId_to_urls[str(docID)])
+            print(docId_to_urls[str(docID)])
+        else:
+            print("THIS SHOULD NOT HAPPEN", docID)
 def launch_milestone_2():
 
     try:
-        # index_of_index_shelve = shelve.open("index_of_index.shelve")
-        index_of_index = json.load(open("index_of_index_tf_idf.txt"))
-        docId_to_urls = json.load(open('docID_urls.txt'))
-        # print('docId_to_urls', docId_to_gurls['data'])
-        # print('index_of_inverted_index', index_of_inverted_index)
-        # print(docId_to_urls)
+
+        # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
+        # docId_to_urls = json.load(open('docID_urls.txt'))
+        # full_index = open('full_index_tf_idf.txt', 'r')
+
+        
+        index_of_index = json.load(open("index_of_index_simhash.txt"))
+        docId_to_urls = json.load(open('docID_urls_simhash.txt'))
+        full_index = open('full_index_simhash.txt', 'r')
+
+        
         query = input("Input your query: \n")
         query_tokens = handle_stopwords(tokenizer(query))
-        # ^^ tokenize query and then return a list of tokens after handling the stopwords
 
         boolean_query_list = []
         # term_being_searched: [post] => [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
 
-        # full_index = open('full_index_tf_idf.txt', 'r')
-        full_index = open('full_index_tf_idf.txt', 'r')
 
         print(query_tokens)
         # print('index_of_index', index_of_index)
@@ -170,23 +209,31 @@ def launch_milestone_2():
                 boolean_query_list.append(posting)
             else: #if not in index_of_index
                 boolean_query_list = [] #set it to an empty list, because this means it found a word that wasn't in any of the documents
-
         boolean_query_list = sorted(
             boolean_query_list, key=lambda x: len(list(x.values())[0]))
         # [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
-        #print(boolean_query_list)
-        res = generate_boolean_search_result(boolean_query_list)
+
+
+        boolean_and_res, intersection_docIDs = generate_boolean_and_search_result(boolean_query_list)
+        
+        
+        boolean_or_res = generate_boolean_or_search_result(boolean_query_list, intersection_docIDs) if len(boolean_and_res) <= 100  else []
+        
+        
+        
+        '''
+        if the res is very little, do boolean query with OR WITH the stop words
+        
+        if the res is still very little, do the boolean query with OR WITH the stop words
+        '''
+        
         # print('boolean_query_list: ', boolean_query_list)
-        if len(res) == 0:
+        if len(boolean_and_res) + len(boolean_or_res) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:
-            print('SEARCH RESULT ==> docIDs ', res)
-            print('URLS: ')
-            for docID in res:
-                if str(docID) in docId_to_urls:
-                    print(docId_to_urls[str(docID)])
-                else:
-                    print("THIS SHOULD NOT HAPPEN", docID)
+            print('SEARCH RESULT: ')
+            display_result(boolean_and_res, docId_to_urls)
+            display_result(boolean_or_res, docId_to_urls)
 
     except Exception as e:
         print('ERROR launch_milestone_2: ', str(e))
