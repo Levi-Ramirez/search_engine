@@ -70,6 +70,7 @@
 
        {% if query %}
            <h1>Search Results for "{{ query }}"</h1>
+           <h2>Took {{ search_time }} ms</h2>
            <ul>
                 <li>Your top results are:</li>
                {% for result in results %}

@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from lxml.html.clean import Cleaner        # clean the HTML up
 import shelve
 import json
 from nltk.stem import PorterStemmer        # stemming
@@ -33,6 +34,27 @@ class InvertedIndex:
     ram_limit_in_bytes = 0.75 * ram_size_in_bytes
 
     return file_size_in_bytes <= ram_limit_in_bytes
+  
+  def sanitize(self, dirty_html):              # accepts string of HTML, cleans it up by removing elements of a certain tag (aka user won't see it on web page, don't tokenize it)
+    cleaner = Cleaner(page_structure=True,
+                  meta=True,
+                  embedded=True,
+                  links=True,
+                  style=True,
+                  processing_instructions=True,
+                  inline_style=True,
+                  scripts=True,
+                  javascript=True,
+                  comments=True,
+                  frames=True,
+                  forms=True,
+                  annoying_tags=True,
+                  remove_unknown_tags=True,
+                  safe_attrs_only=True,
+                  safe_attrs=frozenset(['src','color', 'href', 'title', 'class', 'name', 'id']),
+                  remove_tags=('span', 'font', 'div')
+                  )
+    return cleaner.clean_html(dirty_html)
 
   def tokenizer(self, json_file_path):
     try:
@@ -45,8 +67,11 @@ class InvertedIndex:
         html_content = json_data["content"]
         url = json_data["url"]
         soup = BeautifulSoup(html_content, 'html.parser')
-        soup.prettify()  # fix broken HTML
-        page_text_content = soup.get_text()
+        pretty_html_str = soup.prettify()                    # fix broken HTML, converts it into string
+        clean_html_str = self.sanitize(pretty_html_str)      # clean up HTML (remove elements that user cannot see or ctrl+f for in document)
+        #print(clean_html_str)
+        soup = BeautifulSoup(clean_html_str, 'html.parser')  # convert back to soup obj
+        page_text_content = soup.get_text()                  # get all text from it
 
         # get important fields (headings h, bolded b, and strong)
         # add more occurrences of them to boost
