@@ -295,7 +295,11 @@ def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query do
 
 #returns an int of the number of partial ngrams found
 def nGramDoc(docID, boolean_query_list):
+<<<<<<< HEAD
     #print("nGramDoc:")
+=======
+    print("nGramDoc:")
+>>>>>>> aba412926207a847e3437be468215a8447a91271
     tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each document)
     tfidfScore = 0
     for posting_list in boolean_query_list:
