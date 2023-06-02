@@ -413,7 +413,7 @@ def launch_milestone_1():
     count = 0
     global docID
     for path in paths:
-        count += 1
+        #count += 1
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
@@ -429,7 +429,7 @@ def launch_milestone_1():
     
 
         generate_inverted_index(token_locs, docID, bold_word_counter)
-        if count == 1000: break
+        #if count == 1000: break
 
     # generate_report()
     

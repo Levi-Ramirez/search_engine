@@ -295,7 +295,7 @@ def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query do
 
 #returns an int of the number of partial ngrams found
 def nGramDoc(docID, boolean_query_list):
-    print("nGramDoc:")
+    #print("nGramDoc:")
     tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each document)
     tfidfScore = 0
     for posting_list in boolean_query_list:
@@ -309,7 +309,7 @@ def nGramDoc(docID, boolean_query_list):
                     break
             if found:
                 break
-    print("tokenPosInDoc: ", tokenPosInDoc)
+    #print("tokenPosInDoc: ", tokenPosInDoc)
     indexPos = [0] * len(tokenPosInDoc) #indexPos is the current index you are looking at for that token in this document
     count = 0 #count is the number of times you found sequential words in the order of which they were entered
     lastIndex = len(indexPos) - 1 #save the last index
@@ -407,7 +407,28 @@ def launch_milestone_2():
         query_docsID_tfidf = generate_boolean_search_result(boolean_query_list_sorted) #res is the docID's which gets all of the docs that contain the terms in the boolean_query_list
         #nGram the list and return them and their weights by assorted order
 
-        print(docOrder(query_docsID_tfidf, boolean_query_list)) #query term list, query document result
+
+
+        # STARTING NOW:
+
+        final_list_docIDs_tfidf = docOrder(query_docsID_tfidf, boolean_query_list) #query term list, query document result
+
+        #docFile = open('docID_urls.txt', 'r')
+        docDict = json.load(open("docID_urls.txt"))
+        #print("doctDict: ", docDict)
+        final_list_urls_tfidf = []
+        for docID_tfidf in final_list_docIDs_tfidf:
+            #print("docID_tfidf: ", docID_tfidf)
+            docID = str(docID_tfidf[0])
+            tfidf = docID_tfidf[1]
+            url = docDict[docID]
+            final_list_urls_tfidf.append([url, tfidf])
+        
+        print(final_list_urls_tfidf) #
+            
+
+        #docFile.close()
+
         if len(query_docsID_tfidf) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
         else:

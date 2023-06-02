@@ -25,4 +25,6 @@ index7.txt
 index8.txt
 temp.txt
 testing_index_tf_idf.txt
+index_of_index_tf_idf.txt
 oldstuff/
+*.txt
