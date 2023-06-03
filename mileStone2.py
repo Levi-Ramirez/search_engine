@@ -1,5 +1,6 @@
 import json
 import shelve
+import time
 
 from sympy import python
 from nltk.stem import PorterStemmer  # to stem
@@ -154,9 +155,9 @@ def generate_boolean_search_result(boolean_query_list):
         #filter base list
 
         minTFIDF = 0
-        firstFewCount = 200
+        firstFewCount = 150
         
-        print("this far")
+        #print("this far")
         for curTerm in boolean_query_list: #for every term in the query list
             for token in curTerm: #should only be 1
                 i = 0
@@ -202,7 +203,7 @@ def generate_boolean_search_result(boolean_query_list):
         # print("baseList: ", baseList)
 
         baseList.sort(key = lambda x: x[1], reverse = True) #sort according to tfIDF
-        if len(baseList) > 500: #get the top 500 documents
+        if len(baseList) > 500: #get the top 200 documents
             baseList = baseList[:500]
         return baseList
 
@@ -285,21 +286,21 @@ def generate_boolean_search_result(boolean_query_list):
 def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query document result
     '''returns a list of lists [[docID-1, tfidf-1], [docID-2, tfidf-2]] in order of decreasing tfidf'''
     doc_ngram_count = []
+    intesection_docID = set()
     for docID_tfidf in query_docsID_tfidf:
         docID = docID_tfidf[0]
         tfidf = docID_tfidf[1]
         partial_ngrams = nGramDoc(docID, boolean_query_list) #returns an int of the number of partial ngrams found
         doc_ngram_count.append([docID, partial_ngrams + tfidf])
-    return doc_ngram_count
+        intesection_docID.add(docID)
+    
+    doc_ngram_count = sorted(doc_ngram_count, key = lambda x: x[1], reverse = True)
+    return (doc_ngram_count, intesection_docID)
 
 
 #returns an int of the number of partial ngrams found
 def nGramDoc(docID, boolean_query_list):
-<<<<<<< HEAD
     #print("nGramDoc:")
-=======
-    print("nGramDoc:")
->>>>>>> aba412926207a847e3437be468215a8447a91271
     tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each document)
     tfidfScore = 0
     for posting_list in boolean_query_list:
@@ -356,17 +357,76 @@ def getMinIndex(indexPos, tokenPosInDoc):
 
 
 
-def launch_milestone_2():
+
+# def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
+    
+#     try:
+#         posting_union = []
+#         limit = 0
+        
+#         for index_obj in boolean_query_list: #index_obj = {'shindler': [[1948, [1065], 11.18], [3962, [133], 11.18], [6197, [37], 33.53], [7084, [82], 11.18], [7355, [92], 11.18], [8487, [20], 33.53], [9391, [32], 11.18], [11356, [31], 33.53], [17341, [58], 11.18]]}
+#             if limit >= 50:
+#                 break
+#             token = list(index_obj.keys())[0] # token = 'shindler'
+            
+#             for posting in index_obj[token]:
+#                 docID = posting[0]
+#                 if docID not in intersection_docIDs:
+#                     posting_union.append(posting)
+#                     intersection_docIDs.add(docID)
+
+#         postings_union_ranked = sorted(posting_union, key=lambda x: x[2], reverse=True)
+        
+#         ranked_posting_docIDs = []
+        
+#         for posting in postings_union_ranked:
+#             ranked_posting_docIDs.append(posting[0]) #pushing docID 
+            
+#         return ranked_posting_docIDs
+
+#     except Exception as e:
+#         print('ERROR in generate_boolean_or_search_result: ', str(e))
+#         return []
+def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
+    
+    try:
+        posting_union = []
+        limit = 0
+        
+        for index_obj in boolean_query_list: #index_obj = {'shindler': [[1948, [1065], 11.18], [3962, [133], 11.18], [6197, [37], 33.53], [7084, [82], 11.18], [7355, [92], 11.18], [8487, [20], 33.53], [9391, [32], 11.18], [11356, [31], 33.53], [17341, [58], 11.18]]}
+            if limit >= 50:
+                break
+            token = list(index_obj.keys())[0] # token = 'shindler'
+            
+            for posting in index_obj[token]:
+                docID = posting[0]
+                if docID not in intersection_docIDs:
+                    posting_union.append([posting[0], posting[2]])
+                    intersection_docIDs.add(docID)
+
+        postings_union_ranked = sorted(posting_union, key=lambda x: x[1], reverse=True)
+        
+        
+        return postings_union_ranked[0:50]
+
+    except Exception as e:
+        print('ERROR in generate_boolean_or_search_result: ', str(e))
+        return []
+
+
+
+def launch_milestone_2(index_of_index, docId_to_urls, query):
 
     try:
+
         # index_of_index_shelve = shelve.open("index_of_index.shelve")
         # index_of_index = json.load(open("index_of_index.txt"))
-        index_of_index = json.load(open("index_of_index_tf_idf.txt"))
-        docId_to_urls = json.load(open('docID_urls.txt'))
-        # print('docId_to_urls', docId_to_gurls['data'])
-        # print('index_of_inverted_index', index_of_inverted_index)
-        # print(docId_to_urls)
-        query = input("Input your query: \n")
+        # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
+        # docId_to_urls = json.load(open('docID_urls.txt'))
+        # # print('docId_to_urls', docId_to_gurls['data'])
+        # # print('index_of_inverted_index', index_of_inverted_index)
+        # # print(docId_to_urls)
+        # query = input("Input your query: \n")
         query_tokens = handle_stopwords(tokenizer(query))
         # ^^ tokenize query and then return a list of tokens after handling the stopwords
 
@@ -376,21 +436,21 @@ def launch_milestone_2():
         # full_index = open('full_index.txt', 'r')
         full_index = open('full_index_tf_idf.txt', 'r')
 
-
-        print(query_tokens)
+        #print(query_tokens)
         # print('index_of_index', index_of_index)
         # print('docId_to_urls', docId_to_urls)
+        startTime = time.time()
         for token in query_tokens:
-            print('token', token)
+            #print('token', token)
             if token in index_of_index:
                 pos = index_of_index[token]
-                print('pos', pos)
+                #print('pos', pos)
                 # {"11am": [[14, [501], 1]]}
                 full_index.seek(pos)
                 # line = full_index.readline()
                 line = read_large_line(full_index)
                 # print('line', line)
-                print('making file')
+                #print('making file')
                 if os.path.isfile('err.txt'):
                     os.remove('err.txt')
                 file = open('err.txt', 'w')
@@ -401,22 +461,38 @@ def launch_milestone_2():
                 boolean_query_list.append(posting)
             else: #if not in index_of_index
                 boolean_query_list = [] #set it to an empty list, because this means it found a word that wasn't in any of the documents
+            
+        totalTime = (time.time() - startTime) * 100
+        print("get boolean_query_list: ", totalTime)
 
         boolean_query_list_sorted = sorted(
             boolean_query_list, key=lambda x: len(list(x.values())[0]))
         # [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
         #print(boolean_query_list)
-        print("bool_query_list len: ", len(boolean_query_list))
+        #print("bool_query_list len: ", len(boolean_query_list))
         #print("bool_query_list: ", boolean_query_list)
+        startTime = time.time()
         query_docsID_tfidf = generate_boolean_search_result(boolean_query_list_sorted) #res is the docID's which gets all of the docs that contain the terms in the boolean_query_list
+        totalTime = (time.time() - startTime) * 100
+        print("generate_boolean_search_result: ", totalTime)
         #nGram the list and return them and their weights by assorted order
 
 
 
         # STARTING NOW:
+        startTime = time.time()
+        final_list_docIDs_tfidf, intesection_docID = docOrder(query_docsID_tfidf, boolean_query_list) #query term list, query document result
 
-        final_list_docIDs_tfidf = docOrder(query_docsID_tfidf, boolean_query_list) #query term list, query document result
+        #if there are not enough docs, add more based on max tfidf for each boolean_qeury_list item
+        or_res = generate_boolean_or_search_result(boolean_query_list_sorted, intesection_docID) if len(final_list_docIDs_tfidf) < 50 else []#final_l
+        print("or_res: ", or_res)
 
+        #append the list of lists
+        final_list_docIDs_tfidf = final_list_docIDs_tfidf + or_res
+        totalTime = (time.time() - startTime) * 100
+        print("docOrder: ", totalTime)
+
+        startTime = time.time()
         #docFile = open('docID_urls.txt', 'r')
         docDict = json.load(open("docID_urls.txt"))
         #print("doctDict: ", docDict)
@@ -428,15 +504,18 @@ def launch_milestone_2():
             url = docDict[docID]
             final_list_urls_tfidf.append([url, tfidf])
         
-        print(final_list_urls_tfidf) #
+        totalTime = (time.time() - startTime) * 100
+        print("get [url, tfidf]: ", totalTime)
+        
+        #print(final_list_urls_tfidf) #
             
 
         #docFile.close()
 
         if len(query_docsID_tfidf) == 0:
             print('SEARCH RESULT ==> No search results containing all query terms')
-        else:
-            print("nothing")
+        # else:
+            #print("nothing")
             # print('SEARCH RESULT ==> docIDs ', query_docs)
             # print('URLS: ')
             # for docID in res:
@@ -444,9 +523,19 @@ def launch_milestone_2():
             #         print(docId_to_urls[str(docID)])
             #     else:
             #         print("THIS SHOULD NOT HAPPEN", docID)
-        # print(docId_to_urls)
+        print(final_list_urls_tfidf)
 
     except Exception as e:
         print('ERROR launch_milestone_2: ', str(e))
 
-launch_milestone_2()
+index_of_index = json.load(open("index_of_index_tf_idf.txt"))
+docId_to_urls = json.load(open('docID_urls.txt'))
+# print('docId_to_urls', docId_to_gurls['data'])
+# print('index_of_inverted_index', index_of_inverted_index)
+# print(docId_to_urls)
+query = input("Input your query: \n")
+startTime = time.time()
+launch_milestone_2(index_of_index, docId_to_urls, query)
+endTime = time.time()
+totalTimeMS = (endTime - startTime) * 100
+print("Time it took in mili-seconds: ", totalTimeMS)
