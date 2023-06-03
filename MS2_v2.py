@@ -30,7 +30,6 @@ class Search:
         with open("file_paths.txt", "r") as fps:
             self.json_file_paths = json.load(fps)
 
-        self.num_documents = 55393                           # will sort this out later
         self.ps = PorterStemmer()
         self.stemmed_stop_words = {"that'll", 'from', "you'r", 'o', 'own', 'so', 'have', 'and', 'is', 
                                    'some', 'dure', 'at', 'into', 'with', 'same', "it'", 'doe', 'as', 
@@ -105,29 +104,36 @@ class Search:
                     term_posting_list = ci.readline()
                     all_postings_list.append(json.loads(term_posting_list))         # add the list object into all_postings_list
         return self.calc_top_n(n, all_postings_list)
-    
-    def get_text_from_json_file(self, file_path):
-        with open(file_path, 'r') as f:
-          json_data = json.load(f)     # read contents of file and converts it into a python dict or lists
-      
-        # use BS4 to get text content
+
+    def get_text_for_docID(self, docID):
+        json_file_path = self.json_file_paths[docID]
+
+        with open(json_file_path, 'r') as f:
+          json_data = json.load(f)
+
         html_content = json_data["content"]
         soup = BeautifulSoup(html_content, 'html.parser')
-        soup.prettify()  # fix broken HTML
+        pretty_html_str = soup.prettify()                       # fix broken HTML, converts it into string
+
+        soup = BeautifulSoup(pretty_html_str, 'html.parser')    # convert back to soup obj
         page_text_content = soup.get_text()
         return page_text_content
-    
-    def get_gpt_title_and_summary(self, docID):
-        openai.api_key = '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'
-        file_path = self.json_file_paths[docID]
-        doc_text = self.get_text_from_json_file(file_path)
 
-        messages_title = [  {"role": "system", "content": "give a brief title for this text: " + doc_text}  ]   # may not be necessary
-        messages_summary = [  {"role": "system", "content": "give a brief summary for this text: " + doc_text}  ]
+    def get_gpt_summary(self, docID):
+        openai.api_key = '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'
         
-        title = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages = messages_title)
-        summary = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages = messages_summary)
-        return title, summary
+        doc_text = self.get_text_for_docID(docID)[:4000]          # first 4k characters go into summary
+
+        messages_summary = [  {"role": "system", "content": "give a two sentence summary for this text: " + doc_text}  ]
+        openai_summary_response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages = messages_summary)
+        real_summary = openai_summary_response.choices[0].message.content
+
+        return real_summary
+    
+    def return_summary(self):
+        summary = "This text provides a comparison between 10 different Master's degree programs offered at the University of California, Irvine's Donald Bren School of Information and Computer Sciences. The programs differ in terms of focus, target population, target careers, attendance, units/courses, time to degree, tuition, financial aid, schedule, exit requirements, GRE/TOEFL requirements, career development, and contact information. The programs include Master of Science in Computer Science, Master of Science in Networked Systems, Master of Science in Software Engineering, Master of Science in Informatics, Master of Science in Statistics, Master of Computer Science, Master of Data Science, Master of Embedded and Cyber-physical Systems, Master of Software Engineering, and Master of Human-Computer Interaction and Design."
+        return summary
+
         
 def main():
     s = Search()

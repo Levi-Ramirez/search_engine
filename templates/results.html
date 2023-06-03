@@ -73,8 +73,8 @@
            <h2>Took {{ search_time }} ms</h2>
            <ul>
                 <li>Your top results are:</li>
-               {% for result in results %}
-                   <li><a href="{{ result }}">{{ result }}</a></li>
+               {% for result, summary in results %}
+                   <li><a href="{{ result }}">{{ result }}</a>  <p>{{summary}}</p>  </li>
                {% endfor %}
            </ul>
 

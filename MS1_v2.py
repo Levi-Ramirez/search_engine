@@ -11,6 +11,7 @@ import sys                          # get size of a data structure
 import time
 import re
 import heapq
+from simhash import Simhash
     
 class InvertedIndex:
   def __init__(self):
@@ -18,6 +19,7 @@ class InvertedIndex:
     self.ps = PorterStemmer()
     self.num_partial_indexes = 0     # for naming partial indexes
     self.num_documents = 0
+    self.simhash_scores = list()
 
   def get_json_file_paths(self, root_dir):
     json_paths = []
@@ -25,8 +27,8 @@ class InvertedIndex:
       for f in all_files:
         if f.endswith(".json"):
           json_paths.append(os.path.join(cur_dir, f))
-    self.num_documents = len(json_paths)
-    return json_paths #[:1000]
+    print("Filtering json paths.")
+    return json_paths[::100]       # 100 steps
 
   def is_json_file_size_within_ram_limit(self, file_path):         # can comment out to increase indexing speed
     file_size_in_bytes = os.path.getsize(file_path)
@@ -54,7 +56,37 @@ class InvertedIndex:
                   safe_attrs=frozenset(['src','color', 'href', 'title', 'class', 'name', 'id']),
                   remove_tags=('span', 'font', 'div')
                   )
-    return cleaner.clean_html(dirty_html)
+    
+    # Extract the encoding from the XML declaration
+    encoding_start = dirty_html.find('encoding=')
+    if encoding_start >= 0:                                 # if we find encoding="" in the html
+      encoding_start += len('encoding="')
+      encoding_end = dirty_html.find('"', encoding_start)
+      encoding = dirty_html[encoding_start:encoding_end]    # list slice the encoding out
+      try:
+        dirty_html = dirty_html.encode(encoding)            # need to encode in order to avoid an exception
+      except:
+        dirty_html = dirty_html.encode('utf-8')
+    
+    try:
+      res = cleaner.clean_html(dirty_html)
+    except Exception as e:
+      return ""
+      # print("Exception was:", e)
+      # # exit(1)
+      # import pdb
+      # pdb.set_trace()
+    return res
+
+  def is_duplicate_content(self, page_text_content):
+    finger_print = Simhash(page_text_content)
+    for other_fingerprint in self.simhash_scores:                  # check all other fingerprints, find dist, 12.8 = 80% similarity
+      similarity = finger_print.distance(other_fingerprint)        # gives value 0-64, 0 = 100% similarity, 64 = 0% similarity
+      if similarity <= 12.8:        
+        return True
+      
+    self.simhash_scores.append(finger_print)
+    return False
 
   def tokenizer(self, json_file_path):
     try:
@@ -63,12 +95,22 @@ class InvertedIndex:
         with open(json_file_path, 'r') as f:
           json_data = json.load(f)     # read contents of file and converts it into a python dict or lists
       
+        url = json_data["url"]
+
         # use BS4 to get text content
         html_content = json_data["content"]
-        url = json_data["url"]
+        #html_bytes = html_content.encode('utf-8')
+
         soup = BeautifulSoup(html_content, 'html.parser')
+        if soup.find() is None:
+          return [], ""
+        
         pretty_html_str = soup.prettify()                    # fix broken HTML, converts it into string
+        if len(pretty_html_str) == 0:
+          return [], ""
+        
         clean_html_str = self.sanitize(pretty_html_str)      # clean up HTML (remove elements that user cannot see or ctrl+f for in document)
+
         #print(clean_html_str)
         soup = BeautifulSoup(clean_html_str, 'html.parser')  # convert back to soup obj
         page_text_content = soup.get_text()                  # get all text from it
@@ -90,6 +132,10 @@ class InvertedIndex:
           elif '<h6' in tag:
             page_text_content += (tag.text * 3)
 
+        # get simhash fingerprint
+        # if self.is_duplicate_content(page_text_content):
+        #   return [], ""
+
         # get tokens from text content, lower() + stem() them
         tokens = word_tokenize(page_text_content)
         stemmed_tokens = [self.ps.stem(token.lower()) for token in tokens if token.isalnum()]
@@ -98,7 +144,8 @@ class InvertedIndex:
         print("File size exceeded RAM.\n")
         return [], ""
     
-    except:
+    except Exception as e:
+      print("Exception was:", e)
       print(f"Encountered exception, file: {json_file_path}")
       return [], ""
 
@@ -135,6 +182,7 @@ class InvertedIndex:
       # tokenize, store url for each doc, get posting info for every term in one doc, add to cur partial index
       tokens, url = self.tokenizer(f)
       self.docID_to_url[docID] = url                                      # keep track of docID to url
+      self.num_documents += 1
       dict_term_to_posting_info = self.create_postings(docID, tokens)     # for one doc
 
       for t in dict_term_to_posting_info:
@@ -162,14 +210,25 @@ class InvertedIndex:
             json_str_term = json.dumps(current_partial_index_dict[t])
             f.write(json_str_term + "\n")
         print("I wrote ", file_path)
-
         current_partial_index_dict = dict()                            # reset partial index bc we've dumped it to disk
         num_postings_seen = 0                                          # reset count var
     
+    if num_postings_seen > 0:
+      file_path = f"index{self.num_partial_indexes}.txt"               # new name for index file
+      self.num_partial_indexes += 1
+      with open(file_path, "w") as f:
+        for t in sorted(current_partial_index_dict):                   # sorts my keys alphabetically
+          json_str_term = json.dumps(current_partial_index_dict[t])
+          f.write(json_str_term + "\n")
+      print("I wrote ", file_path)
+
     # store the docID_to_url dict into a text file
     with open("docID_to_url.txt", "w") as dtu:
       url_dict_str = json.dumps(self.docID_to_url)
       dtu.write(url_dict_str)
+    
+    with open("num_documents.txt", "w") as nd:
+      nd.write(str(self.num_documents))
 
   def calc_tfidf(self, tf, N, df):
     # (1 + log(tf)) * log(N / df)
@@ -303,7 +362,8 @@ def main(mode):
     ii.create_and_store_partial_indexes(root_dir)
   elif mode == "--merge":
     dir_path = "."
-    ii.num_documents = 55393             # hard coded for merging
+    with open("num_documents.txt", "r") as f:
+      ii.num_documents = int(f.read())
     ii.merge_partial_indexes(dir_path)
   else:
     print("Unknown argument.")
