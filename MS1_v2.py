@@ -28,7 +28,7 @@ class InvertedIndex:
         if f.endswith(".json"):
           json_paths.append(os.path.join(cur_dir, f))
     print("Filtering json paths.")
-    return json_paths[::100]       # 100 steps
+    return json_paths  #[::100]       # 100 steps
 
   def is_json_file_size_within_ram_limit(self, file_path):         # can comment out to increase indexing speed
     file_size_in_bytes = os.path.getsize(file_path)
