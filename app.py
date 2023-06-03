@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+import json
 #from mileStone1 import posting
 #from MS2 import Timer
 #from MS2 import Search
@@ -28,8 +29,11 @@ def perform_search():
 
 
 def perform_actual_search(query):
-    # Dummy URLs for demonstratio
-    dummy_urls = launch_milestone_2(query)
+    # Dummy URLs for demonstration
+    index_of_index = json.load(open("index_of_index_tf_idf.txt"))
+    docId_to_urls = json.load(open('docID_urls.txt'))
+    full_index = open('full_index_tf_idf.txt', 'r')
+    dummy_urls = launch_milestone_2(query, index_of_index, docId_to_urls, full_index)
     if len(dummy_urls) == 0:
         dummy_urls.append("NoResults")
     

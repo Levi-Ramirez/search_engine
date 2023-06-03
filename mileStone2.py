@@ -264,18 +264,18 @@ def links_search_result(search_result, docId_to_urls):
 
 
 
-def launch_milestone_2(query):
+def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
 
     try:
         # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
         # docId_to_urls = json.load(open('docID_urls.txt'))
         # full_index = open('full_index_tf_idf.txt', 'r')
 
-        index_of_index = json.load(open("index_of_index_simhash.txt"))
-        docId_to_urls = json.load(open('docID_urls_simhash.txt'))
-        full_index = open('full_index_simhash.txt', 'r')
+        # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
+        # docId_to_urls = json.load(open('docID_urls.txt'))
+        # full_index = open('full_index_tf_idf.txt', 'r')
 
-
+        startTime = time.time()
         query_tokens = handle_stopwords(tokenizer(query))
         # ^^ tokenize query and then return a list of tokens after handling the stopwords
         boolean_query_list = []# term_being_searched: [post] => [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
@@ -307,7 +307,10 @@ def launch_milestone_2(query):
         # or_boolean_search_result = [[docID, tf-idf]]
 
         search_result = nGrams_search_result + or_boolean_search_result
-        
+        endTime = time.time()
+        finalTimeMS = (endTime - startTime) * 100
+
+        print("Query time in mili-seconds: ", finalTimeMS)
 
         return links_search_result(search_result, docId_to_urls)
     

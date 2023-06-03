@@ -400,7 +400,7 @@ def is_duplicate_content(text_content):
     finger_print = Simhash(text_content)
     for other_fingerprint in simhash_scores:  # loop through each one        
         similarity = finger_print.distance(other_fingerprint) # see if they are similar
-        if similarity <= 9: # 0 = 100 % same, 64 = 0 % same ||||| ran 17, 30, 12, 15, 13 (13 gave 11k) (never finished 12 thinking it got into a trap. it may or may not be true)
+        if similarity <= 12: # 0 = 100 % same, 64 = 0 % same ||||| ran 17, 30, 12, 15, 13 (13 gave 11k) (never finished 12 thinking it got into a trap. it may or may not be true)
             return True #if they are similar, return True
 
     simhash_scores.append(finger_print)
@@ -428,8 +428,8 @@ def create_index_of_index():
 
 def launch_milestone_1():
     '''our main funciton.'''
-    folder_path = '/home/mnadi/121/A3/search_engine/DEV'
-    # folder_path = '/home/leviar/121/assign3/search_engine/DEV'
+    # folder_path = '/home/mnadi/121/A3/search_engine/DEV'
+    folder_path = '/home/leviar/121/assign3/search_engine/DEV'
     
     if os.path.isfile("duplicate_pages.txt"):
         os.remove("duplicate_pages.txt")
