@@ -54,4 +54,4 @@ def main():
             print(f"Total time was {time.time() - start_t}\n")
 '''
 if __name__ == '__main__':
-    app.run()
+    app.run(port=5001)
