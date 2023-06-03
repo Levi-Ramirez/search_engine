@@ -301,7 +301,7 @@ def docOrder(query_docsID_tfidf, boolean_query_list): #query term list, query do
 #returns an int of the number of partial ngrams found
 def nGramDoc(docID, boolean_query_list):
     #print("nGramDoc:")
-    tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each document)
+    tokenPosInDoc = [] #token positions will be a list of lists (one list of positions for each term in the document)
     tfidfScore = 0
     for posting_list in boolean_query_list:
         found = False
@@ -319,11 +319,13 @@ def nGramDoc(docID, boolean_query_list):
     count = 0 #count is the number of times you found sequential words in the order of which they were entered
     lastIndex = len(indexPos) - 1 #save the last index
 
-    minIndex = getMinIndex(indexPos, tokenPosInDoc)
+    minIndex = getMinIndex(indexPos, tokenPosInDoc) #gets the first index where this term appears in this document
     while(True):
         # if lastIndex == minIndex:
         #     indexPos[minIndex] += 1 #incriment the next minimum index of this term
         #     minIndex = getMinIndex(indexPos, tokenPosInDoc)
+
+        #if the minIndex is not the last index AND the current and the current token's position - the next token's position has a difference of only one (then they follow each other)
         if lastIndex != minIndex and tokenPosInDoc[minIndex][indexPos[minIndex]] - tokenPosInDoc[minIndex + 1][indexPos[minIndex + 1]] == 1:
             count += 1
             indexPos[minIndex] += 1 #incriment the next minimum index of this term
