@@ -47,7 +47,11 @@ simhash_scores = [] #list of simhash object for all the documents. to detect the
 
 
 def tokenizer(page_text_content):
-    '''this function gets text content of a site and tokenzie it. '''
+    '''
+    tokenizer takes in a string, tokenizes it,
+    and stems the tokens.
+    Returns: (string) - list of stemmed tokens
+    '''
     try:
         tokens = []
         cur_word = ""
@@ -73,14 +77,26 @@ def tokenizer(page_text_content):
 
 
 def get_file_text_content(file_path):
-    '''this function returns the text content of a json file and counter for bold words'''
+    '''
+    get_file_text_content gets the html content from a json file and
+    extracts its text. It also gets each tags and counts the important/
+    words in a a dictionary with {term-str: total weight-int}
+    Returns: (text_content-str, bold_word_counter-dict)
+        text_content: the text content of a json filecounter of the total
+        bold_word_counter: dict of {term-str: total weight-int}
+    '''
 
     try:
         with open(file_path, 'r') as f:
+            #load json file
             data = json.load(f)
             html_content = data['content']
+            #get text content
             soup = BeautifulSoup(html_content, 'html.parser')
             text_content = soup.get_text()
+            #for each tag, get its text content
+            ##if it is important, store its weight and incriment
+            ##each word in the tag according to that weight in bold_word_counter
             bold_word_counter = {}
             for tag in soup.findAll():
                 tag_name = tag.name
@@ -110,9 +126,16 @@ def get_file_text_content(file_path):
 
 
 def read_large_line(file):
+    '''
+    read_large_line reads the full line in a string no matter the size of the line
+    - useful because we ran into a buffer overload error using the regular readline
+      which has a default size of 4096
+    Returns: the line (str)
+    '''
     chunk_size = 4096  # python line buffer size
     line = ''
 
+    #keep reading until it reaches a newline or EOF
     while True:
         chunk = file.readline(chunk_size)
         line += chunk
@@ -124,7 +147,10 @@ def read_large_line(file):
 
 
 def map_docID_url(file_path, docID):
-    '''this function maps docID to its URL'''
+    '''
+    map_docID_url maps docID to its URL in the dictionary in file_path
+    Returns: null
+    '''
     try:
         with open(file_path, 'r') as f:
             data = json.load(f)
@@ -135,9 +161,12 @@ def map_docID_url(file_path, docID):
 
 
 def get_file_paths(folder_path):
-    '''this function gives a list of paths of all the json files'''
+    '''
+    get_file_paths gives a list of paths of all the json files
+    Returns: filepath of all json files (list)
+    '''
     paths = []
-    for dirpath, dirnames, filenames in os.walk(folder_path):
+    for dirpath, dirnames, filenames in os.walk(folder_path): #MEHMET plz explain what u mdid here with this sorcery ty!
         for filename in filenames:
             if filename.endswith('.json'):
                 file_path = os.path.join(dirpath, filename)
@@ -146,6 +175,11 @@ def get_file_paths(folder_path):
 
 
 def write_to_file(thisFile, newDict):
+    '''
+    write_to_file writes newDict to thisFile with a newline
+    between each dictionary key
+    Returns: null
+    '''
     for key in newDict:
         tempDict = {key: newDict[key]}
         json.dump(tempDict, thisFile)
@@ -153,12 +187,21 @@ def write_to_file(thisFile, newDict):
 
 
 def generate_inverted_index(token_locs, docID, strong_word_count):
-    '''this function generates/fills the inverted_index. Gets token_locs (key is a word and value is a list of the postions of that word) and docID as parameters, strong_word_count (dic of strong words and count).'''
-    
+    '''
+    generate_inverted_index fills/writes out the inverted_index. Write the
+    inverted_index to a file if the number of documents since last write exceeds 5000.
+    - token_locs (dict) that has a word (str) as a key and a value as a list of positions of that word in the document
+    - docID is the document's ID
+    - strong_word_count (dic of strong words and count)
+    Returns: null, writes to global variable inverted_index (dict)
+    '''
 
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
+
+    #if this is true, write inverted_index to index#.txt
+    #and reset indexSplitCounter to 0
     if indexSplitCounter > 5000:
         fileName = "index" + str(fileCount) + ".txt"
         if os.path.exists(fileName):
@@ -174,19 +217,20 @@ def generate_inverted_index(token_locs, docID, strong_word_count):
         fileCount += 1
     try:
         for token in token_locs:
-            # tfidf = round(count_tokens[token] / len(count_tokens), 4)
-            
             tfidf = 0
-            
+            # if its found in strong_word_count, incriment make its
+            # tfidf equal to the number of tokens + strong_word_count[token]
+            # then decriment the strong_word_count for that token
             if token in strong_word_count and strong_word_count[token] > 0:
                 tfidf = len(token_locs[token]) + strong_word_count[token]
                 strong_word_count[token] -= 1
             else:
-                tfidf = len(token_locs[token])
+                tfidf = len(token_locs[token]) #if no strong word tfidf = the # of occurrances of this token
                 
 
             # post = Posting(docID, token_locs[token], tfidf)
             post = [docID, token_locs[token], tfidf]
+            #write out each token to the inverted_index
             if token in inverted_index:
                 inverted_index[token].append(post)
             else:
@@ -196,6 +240,11 @@ def generate_inverted_index(token_locs, docID, strong_word_count):
 
 
 def write_remaining_index():
+    '''
+    write_remaining_index writes out inverted_index to a new file (will be thefinal partial index).
+    Returns: null, writes out the global variable inverted_index (dict)
+    '''
+
     global indexSplitCounter
     global fileCount
     indexSplitCounter += 1
@@ -206,8 +255,8 @@ def write_remaining_index():
     with open(fileName, "w") as thisFile:
         res = sorted(inverted_index.items())
         newDict = dict(res)
-        # json.dump(newDict, thisFile)  REPLACE THIS LINE
-        write_to_file(thisFile, newDict)  # replacement
+        
+        write_to_file(thisFile, newDict)  # essentially json.dump(newDict, thisFile) with new lines
 
     inverted_index.clear()
     indexSplitCounter = 0
@@ -215,6 +264,10 @@ def write_remaining_index():
 
 
 def getKey(myStr):
+    '''
+    getKey gets the current key in the line of text representing a dictionary
+    Returns: key (str)
+    '''
     firstQuote = myStr.find('"')
     secondQuote = myStr.find('"', firstQuote + 1)
     if firstQuote == -1 or secondQuote == -1:  # if there is no key, return empty string
@@ -225,27 +278,28 @@ def getKey(myStr):
 
 def merge_step(dictHolder, dict2):
     '''
-    this merges two given dictionaries (in this case tokens) together from the passed dictionaries
+    merge_step merges two given dictionaries (in this case tokens) together from the passed dictionaries
     - technically, there should only be one key per dictionary (see merge_partial_indexes)
-
     '''
     for key in dict2:
         if key in dictHolder:
-            # dictHolder[key].append(dict2[key])
             i = 0
             k = 0
             dict2List = dict2[key]
-            # for every posting already in the dictHolder
+            # for every posting for this token, check if the posting's docID (posting[0])
+            # is greater than the the current posting at dict2List[k]'s docID
+            # if it is, add insert it in the dictionary (preserves docID ordering)
             for posting in dictHolder[key]:
                 if (posting[0] > dict2List[k][0]):
-                    # dictHolder[key].insert(i, dictHolder[key].insert(dict2List[k]))
                     dictHolder[key].insert(i, dict2List[k])
                     k = + 1
                     if k >= len(dict2List):  # reached the end
                         break
                 i += 1
 
-            while k < len(dict2List):  # if we havent reached the end of dict2List
+            # if we havent reached the end of dict2List, append the remaining postings
+            # to dictHolder
+            while k < len(dict2List):  
                 dictHolder[key].append(dict2List[k])
                 k += 1
 
@@ -254,21 +308,26 @@ def merge_step(dictHolder, dict2):
 
 
 def merge_partial_indexes():
-    '''Merges the partial indexes'''
+    '''
+    merge_partial_indexes merges the partial indexes into one file: full_index.txt
+    Returns: null
+    '''
     if os.path.isfile("full_index.txt"):
         os.remove("full_index.txt")
     full_index = open("full_index.txt", 'w')
     global fileCount
     tempCount = 0
     arrFiles = []
-    while tempCount < fileCount:  # open all files loop
+
+    # open all files and write their file pointers to arrFiles
+    while tempCount < fileCount:  
         fileName = "index" + str(tempCount) + ".txt"
         tempHolder = open(fileName, "r")
         arrFiles.append(tempHolder)
         tempCount += 1
     arrNextMinIndexesText = []
     arrNextMinIndexesDict = []
-    # while True:
+    
     tempCount = 0
     while tempCount < fileCount:
         # will be a list of dictionary entries represented by text
@@ -295,13 +354,10 @@ def merge_partial_indexes():
             curKey = getKey(x)
             if curKey != "" and (curKey < minKey):
                 minKey = curKey
-        # if(minKey == float('inf')):
-        #     break
         i = 0
         dictHolder = {}  # holder is the new dictionary which we will write to the file
-        # print(arrNextMinIndexesDict)
-        # print(minKey)
 
+        
         while i < fileCount:
             if minKey in arrNextMinIndexesDict[i]:
                 # print(arrNextMinIndexesDict[i])
@@ -433,13 +489,8 @@ def launch_milestone_1():
     
     if os.path.isfile("duplicate_pages.txt"):
         os.remove("duplicate_pages.txt")
-    
-    
-    #TESTING CHANGE THIS PART TO NORMAL AFTER
-    paths = get_file_paths(folder_path)  # list of paths to all the files #ACTUAL
-    # paths = ['/home/mnadi/121/A3/search_engine/testing_dev_file.json'] #TESTING
-    # TESTING. CHANGE THIS PART TO NORMAL AFTER
-    
+
+    paths = get_file_paths(folder_path)  # list of paths to all the files
     
     duplicate_pages_txt = open('duplicate_pages.txt', 'w')
     global docID
@@ -458,14 +509,12 @@ def launch_milestone_1():
         docID += 1
         map_docID_url(path, docID) # assign docID to its proper URL // {docID : url}
         tokens = tokenizer(text_content)  # tokenize the text content
-        # token_count = token_counter(tokens)  # count tokens
-        token_locs = token_locator(tokens)  # get a list of token positions
-        # fill/generate inverted index
-    
 
+        token_locs = token_locator(tokens)  # get a list of token positions
+
+        # fill/write out inverted index (if current is full)
         generate_inverted_index(token_locs, docID, bold_word_counter)
 
-    # generate_report()
     
     if os.path.isfile("total_doc_count.txt"):
         os.remove("total_doc_count.txt")
@@ -488,7 +537,3 @@ def launch_milestone_1():
 if __name__ == '__main__':
     print("Running...")
     launch_milestone_1()
-
-    # launch_milestone_2()
-
-    # print(index_of_index)
