@@ -10,7 +10,11 @@ stop_words = set(get_stop_words('en'))
 
 
 def tokenizer(page_text_content):
-    '''this function gets text content of a site and tokenzie it. '''
+    '''
+    tokenizer takes in a string, tokenizes it,
+    and stems the tokens.
+    Returns: (string) - list of stemmed tokens
+    '''
     try:
         tokens = []
         cur_word = ""
@@ -60,9 +64,16 @@ def handle_stopwords(query_tokens):
 
 
 def read_large_line(file):
+    '''
+    read_large_line reads the full line in a string no matter the size of the line
+    - useful because we ran into a buffer overload error using the regular readline
+      which has a default size of 4096
+    Returns: the line (str)
+    '''
     chunk_size = 4096  # python line buffer size
     line = ''
 
+    #keep reading until it reaches a newline or EOF
     while True:
         chunk = file.readline(chunk_size)
         line += chunk
@@ -76,14 +87,13 @@ def boolean_and_search(boolean_query_list):
  
     try:
         search_result_docIDs = []
-        # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], frequency]]}
+        # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], tfidf]]}
         if len(boolean_query_list) == 0:
             return search_result_docIDs #return the empty set
         least_seen_word_object = boolean_query_list[0]
-        # print("least seen word: ", least_seen_word_object)
+
         least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
-        # print("least_seen_word_object[least_seen_word]", least_seen_word_object[least_seen_word])
-        # print(len(boolean_query_list))
+
         baseList = [] #baseList is the list of docID's that are in the least_seen_word
         
         for posting in least_seen_word_object[least_seen_word]:
@@ -97,14 +107,11 @@ def boolean_and_search(boolean_query_list):
         minTFIDF = 0
         firstFewCount = 150
         
-        #print("this far")
         for curTerm in boolean_query_list: #for every term in the query list
             for token in curTerm: #should only be 1
                 i = 0
                 j = 0
                 while i < len(baseList): # for every element in the baselist
-                    #print("i: ", i)
-                    #print("baseList:", baseList)
 
                     #calculate new minimum tf-idf to look for up until the "firstFewCount" runs out
                     if firstFewCount > 0:
@@ -118,7 +125,6 @@ def boolean_and_search(boolean_query_list):
                             continue
 
                     while j < len(curTerm[token]): # for every posting in the current term
-                        #print("j:", j)
                         curPosting = curTerm[token][j] #note: curTerm[token][j] gives a posting, curPosting[0] gives the docID
                         if curPosting[0] > baseList[i][0]: #if current posting's doc id is greater than the baseList's doc id
                             del baseList[i]
@@ -135,7 +141,6 @@ def boolean_and_search(boolean_query_list):
 
                     i += 1
 
-
         baseList.sort(key = lambda x: x[1], reverse = True) #sort according to tfIDF
         if len(baseList) > 500: #get the top 200 documents
             baseList = baseList[:500]
@@ -147,7 +152,6 @@ def boolean_and_search(boolean_query_list):
     except Exception as e:
         print('ERROR in generate_boolean_search_result: ', str(e))
         return []
-
 
 
 
@@ -183,7 +187,7 @@ def nGramDoc(docID, boolean_query_list):
                     break
             if found:
                 break
-    #print("tokenPosInDoc: ", tokenPosInDoc)
+
     indexPos = [0] * len(tokenPosInDoc) #indexPos is the current index you are looking at for that token in this document
     count = 0 #count is the number of times you found sequential words in the order of which they were entered
     lastIndex = len(indexPos) - 1 #save the last index
@@ -204,10 +208,8 @@ def nGramDoc(docID, boolean_query_list):
             if(len(tokenPosInDoc[minIndex]) <= indexPos[minIndex]): #if it reached the end of this list, break cuz the query n-gram is not not relavent
                 break
             minIndex = getMinIndex(indexPos, tokenPosInDoc)
-    #return count, tfidfScore
-    return count
 
-        
+    return count
 
         
 
@@ -267,13 +269,6 @@ def links_search_result(search_result, docId_to_urls):
 def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
 
     try:
-        # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
-        # docId_to_urls = json.load(open('docID_urls.txt'))
-        # full_index = open('full_index_tf_idf.txt', 'r')
-
-        # index_of_index = json.load(open("index_of_index_tf_idf.txt"))
-        # docId_to_urls = json.load(open('docID_urls.txt'))
-        # full_index = open('full_index_tf_idf.txt', 'r')
 
         startTime = time.time()
         query_tokens = handle_stopwords(tokenizer(query))
@@ -289,10 +284,6 @@ def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
                 index_obj_json = json.loads(index_obj_txt)
                 boolean_query_list.append(index_obj_json) #push the index object to query list
             #if not in index_of_index, then we never countered that word, no result with that token. search result wont include this current token. but there might be result for the remaining tokens
-            
-             
-            
-
 
         boolean_query_list_sorted = sorted(
             boolean_query_list, key=lambda x: len(list(x.values())[0])) #sorting based on docIDs, increasing order
@@ -314,7 +305,6 @@ def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
 
         return links_search_result(search_result, docId_to_urls)
     
-            
 
     except Exception as e:
         return []
