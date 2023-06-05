@@ -14,20 +14,11 @@ import hashlib
 # from simhash import Simhash
 from nltk.tokenize import word_tokenize
 from nltk.stem import PorterStemmer  # to stem
-# from nltk.tokenize import sent_tokenize, word_tokenize
 from stop_words import get_stop_words
 import shelve
 from simhash import Simhash
 
 
-
-'''
-1. loop DEV folder and open each file
-2. get the html content of json file
-3. populate inverted_index dictionary
-4. create report
-
-'''
 fileCount = 0
 indexSplitCounter = 0
 docID = 0
@@ -329,19 +320,21 @@ def merge_partial_indexes():
     arrNextMinIndexesDict = []
     
     tempCount = 0
+
     while tempCount < fileCount:
-        # will be a list of dictionary entries represented by text
+        # tempStr is a list of dictionary entries represented by text
         tempStr = read_large_line(arrFiles[tempCount])
         
         if tempStr:
             arrNextMinIndexesText.append(tempStr)
-            # arrNextMinIndexesText.append(arrFiles[tempCount].readline()) #will be a list of dictionary entries represented by text
+
             # will be a list of ACTUAL dictionary entries
             arrNextMinIndexesDict.append(
                 json.loads(arrNextMinIndexesText[tempCount]))
         tempCount += 1
-    # minKey = getKey(arrNextMinIndexesText[0])
+
     while (True):
+        # MINKEY: populates arrNextMinIndexesText and gets the minimum key out of them
         minKey = ""
         for x in arrNextMinIndexesText:  # gets the first non-empty string and assign it to minKey
             if x != "":
@@ -350,28 +343,26 @@ def merge_partial_indexes():
         if minKey == "":  # means that all of them were empty strings, nothing else to read from all files
             break
 
+        #gets the minimum key (reasoning is cuz we want to preserve alphabetical order of the keys)
         for x in arrNextMinIndexesText:
             curKey = getKey(x)
             if curKey != "" and (curKey < minKey):
                 minKey = curKey
         i = 0
-        dictHolder = {}  # holder is the new dictionary which we will write to the file
 
-        
+        dictHolder = {}  # holder is the new dictionary which will hold only one token (current minimum)
+        # Below loop essentially gets and merdges all of the files which have the minimum token (alphabetically speaking)
         while i < fileCount:
             if minKey in arrNextMinIndexesDict[i]:
-                # print(arrNextMinIndexesDict[i])
-                merge_step(dictHolder, arrNextMinIndexesDict[i])
-                # print(dictHolder)
-                arrNextMinIndexesText[i] = read_large_line(
-                    arrFiles[i])  # update this to the next line
-                # arrNextMinIndexesText[i] = arrFiles[i].readline() #update this to the next line
+                merge_step(dictHolder, arrNextMinIndexesDict[i]) #merge
+                arrNextMinIndexesText[i] = read_large_line(arrFiles[i])  # read the next line in this file
                 if (arrNextMinIndexesText[i] != ""):
                     # update this to the next dict entry
                     arrNextMinIndexesDict[i] = json.loads(
                         arrNextMinIndexesText[i])
             i += 1
-        # print(dictHolder)
+        
+        # write dictHolder to the full_index
         json.dump(dictHolder, full_index)
         full_index.write('\n')
 
@@ -383,7 +374,10 @@ def merge_partial_indexes():
 
 
 def token_locator(tokens):
-    '''this function returns a dictionary of words with a list of the indexes where it the word is'''
+    '''
+    token_locator takes in a list of tokens from a document and returns...
+    Returns: token_locs, dict of {word(str) : list of positions of where the token appears in the document (list of ints)}
+    '''
     token_locs = {}
     i = 0
     for token in tokens:
@@ -397,9 +391,9 @@ def token_locator(tokens):
 
     return token_locs
 
-
+# THIS FUNCTION IS NOT USED IN MILESTONE 3, don't need to review
 def generate_report():
-    '''This funciton generates our report for milestone 1. It will print the word and the list of all the documents that word seen and frequency of that word in that doc. for example, "random_word": [(1, 0.24) (99, 0.0029) ... ] where every tupple is (docID, frequency)'''
+    '''generate_report generates our report for milestone 1. It will print the word and the list of all the documents that word seen and frequency of that word in that doc. for example, "random_word": [(1, 0.24) (99, 0.0029) ... ] where every tupple is (docID, frequency)'''
     try:
         filename = 'REPORT.txt'
         file2 = 'InvertedIndex.txt'
@@ -450,8 +444,9 @@ def generate_report():
 def is_duplicate_content(text_content):
     '''
     is_duplicate_content: if we add a page with similar content, return true
+    - uses Simhash to detect duplicates with a threshold of 12
     '''
-    global simhash_scores #simhash objects
+    global simhash_scores #simhash objects (list of previous hashes)
     
     finger_print = Simhash(text_content)
     for other_fingerprint in simhash_scores:  # loop through each one        
@@ -459,17 +454,22 @@ def is_duplicate_content(text_content):
         if similarity <= 12: # 0 = 100 % same, 64 = 0 % same ||||| ran 17, 30, 12, 15, 13 (13 gave 11k) (never finished 12 thinking it got into a trap. it may or may not be true)
             return True #if they are similar, return True
 
-    simhash_scores.append(finger_print)
+    simhash_scores.append(finger_print) #if they are not similar, add it to simhash_scores
     return False
 
 def create_index_of_index():
+    '''
+    create_index_of_index: creates the index of index
+    - gets the beginning position of each line in full_index.txt (which is the posting list for a token)
+      and stores it in a dictionary with the token string as a key
+    Returns: null but writes out the index of index to index_of_index.txt
+    '''
     full_index = open("full_index.txt", 'r')
     while True:
         pos = full_index.tell()
         curLine = read_large_line(full_index)
-        # curLine = full_index.readline()
         if not curLine:
-            break  # need to break here!
+            break  # need to break here if the line is empty
         tempDict = json.loads(curLine)
         for token in tempDict:
             if token in index_of_index:
@@ -483,10 +483,14 @@ def create_index_of_index():
 
 
 def launch_milestone_1():
-    '''our main funciton.'''
+    '''
+    Essentially executes mileStone1.py which creates and merdges the partial indexes
+    as well as the index of indexes of the full index.
+    '''
     # folder_path = '/home/mnadi/121/A3/search_engine/DEV'
     folder_path = '/home/leviar/121/assign3/search_engine/DEV'
     
+    #store duplicate pages in case we want to see them in duplicate_pages.txt
     if os.path.isfile("duplicate_pages.txt"):
         os.remove("duplicate_pages.txt")
 
@@ -494,6 +498,8 @@ def launch_milestone_1():
     
     duplicate_pages_txt = open('duplicate_pages.txt', 'w')
     global docID
+
+    #go through each file path and add its text content to an inverted_index
     for path in paths:
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
@@ -516,16 +522,16 @@ def launch_milestone_1():
         generate_inverted_index(token_locs, docID, bold_word_counter)
 
     
-    if os.path.isfile("total_doc_count.txt"):
+    if os.path.isfile("total_doc_count.txt"): #total_doc_count.txt will help us calculate tfidf later
         os.remove("total_doc_count.txt")
     
     
     total_doc_count = open("total_doc_count.txt", 'w')
     total_doc_count.write(str(docID))
     total_doc_count.close()
-    write_remaining_index()
+    write_remaining_index()  # write the remaining data out in inverted_index to another partial index
     merge_partial_indexes()  # merges the partial indexes
-    create_index_of_index()  # creates index_of_index (global dictionary)
+    create_index_of_index()  # creates index_of_index (dictionary in a file)
     duplicate_pages_txt.close()
     if os.path.isfile("docID_urls.txt"):
         os.remove("docID_urls.txt")
