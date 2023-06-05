@@ -42,25 +42,24 @@ def tokenizer(page_text_content):
 def handle_stopwords(query_tokens):
     '''
     if stopwords needed, keeps the original query_tokens and returns query_tokens 
-    if stopwords NOT needed, removes the stopwords and  returns query_tokens_no_stop_words
+    if stopwords NOT needed, removes the stopwords and returns query_tokens_no_stop_words
     '''
     global stop_words
 
-    query_tokens_no_stop_words = []
-    removed = []
-    for token in query_tokens:
-        if token in stop_words:
-            removed.append(token)
-            continue
+    query_tokens_no_stop_words = [] # query after stop words removed
+    removed = [] #list to store the removed stop words
+    for token in query_tokens: 
+        if token in stop_words: 
+            removed.append(token) 
         else:
             query_tokens_no_stop_words.append(token)
 
     loss_percentange = 100 - ((len(query_tokens_no_stop_words)
-                               * 100) / len(query_tokens))
+                               * 100) / len(query_tokens)) # how much of the query is lost after removing the stop words
 
     if loss_percentange >= 50:  # more than 50 percent of the query is lost. stop words needed
-        return query_tokens
-    return query_tokens_no_stop_words  # stop words NOT needed, remove them
+        return query_tokens # return the original query 
+    return query_tokens_no_stop_words  # stop words NOT needed, return list with NO stop words
 
 
 def read_large_line(file):
@@ -86,23 +85,22 @@ def read_large_line(file):
 def boolean_and_search(boolean_query_list):
  
     try:
-        search_result_docIDs = []
         # {'decemb': [[4, [1826, 1917], 2]]} => {word: [[docID, [positions...], tfidf]]}
         if len(boolean_query_list) == 0:
-            return search_result_docIDs #return the empty set
-        least_seen_word_object = boolean_query_list[0]
+            return [] #return the empty list
+        
+        least_seen_word_object = boolean_query_list[0] # => {'decemb': [[4, [1826, 1917], 2]]}
 
-        least_seen_word = list(boolean_query_list[0].keys())[0]  # decemb
+        least_seen_word = list(boolean_query_list[0].keys())[0]  # 'decemb'
 
         baseList = [] #baseList is the list of docID's that are in the least_seen_word
         
-        for posting in least_seen_word_object[least_seen_word]:
-                baseList.append([posting[0], posting[2]])
-                # docIDList.append(posting[0])
+        for posting in least_seen_word_object[least_seen_word]: #posting = [4, [1826, 1917], 2]
+                baseList.append([posting[0], posting[2]]) #docID = posting[0], tf-idf = posting[2]
+
         if len(boolean_query_list) == 1: #if its 1 query term, then write out the documents that have that term
             return baseList
 
-        #filter base list
 
         minTFIDF = 0
         firstFewCount = 150
@@ -146,7 +144,6 @@ def boolean_and_search(boolean_query_list):
             baseList = baseList[:500]
         return baseList
 
-        # return docIDList
                         
 
     except Exception as e:
@@ -230,11 +227,8 @@ def generate_boolean_or_search_result(boolean_query_list, intersection_docIDs):
     
     try:
         posting_union = []
-        limit = 0
         
         for index_obj in boolean_query_list: #index_obj = {'shindler': [[1948, [1065], 11.18], [3962, [133], 11.18], [6197, [37], 33.53], [7084, [82], 11.18], [7355, [92], 11.18], [8487, [20], 33.53], [9391, [32], 11.18], [11356, [31], 33.53], [17341, [58], 11.18]]}
-            if limit >= 50:
-                break
             token = list(index_obj.keys())[0] # token = 'shindler'
             
             for posting in index_obj[token]:
@@ -258,7 +252,7 @@ def links_search_result(search_result, docId_to_urls):
     for result in search_result:
         docID = result[0] # docID = result[0], result[1] = tfidf
         
-        if str(docID) in docId_to_urls:
+        if str(docID) in docId_to_urls: #docId_to_urls = {docID: 'url'}
             links.append(docId_to_urls[str(docID)])
         else:
             print("THIS SHOULD NOT HAPPEN", result)
@@ -275,13 +269,14 @@ def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
         # ^^ tokenize query and then return a list of tokens after handling the stopwords
         boolean_query_list = []# term_being_searched: [post] => [{'decemb': [[4, [1826, 1917], 2]]}, {'deng': [[4, [222], 1]]}, {'depart': [[4, [2687], 1], [9, [108], 1], [12, [84], 1]]}]
 
-        for token in query_tokens:
+        for token in query_tokens: # token is one of the words found in the query 
             if token in index_of_index:
-                pos = index_of_index[token] 
+                pos = index_of_index[token] # pos = is the position for this post in the full_indexs
                 full_index.seek(pos)
-                index_obj_txt = read_large_line(full_index) #{'decemb': [[4, [1826, 1917], 2]]}
+                index_obj_txt = read_large_line(full_index) # index_obj_txt = "{'decemb': [[4, [1826, 1917], 2]]}"
 
-                index_obj_json = json.loads(index_obj_txt)
+                index_obj_json = json.loads(index_obj_txt) # index_obj_json = {'decemb': [[4, [1826, 1917], 2]]}
+                
                 boolean_query_list.append(index_obj_json) #push the index object to query list
             #if not in index_of_index, then we never countered that word, no result with that token. search result wont include this current token. but there might be result for the remaining tokens
 
@@ -297,7 +292,7 @@ def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
         or_boolean_search_result = generate_boolean_or_search_result(boolean_query_list_sorted, intesection_docID) if len(nGrams_search_result) < 50 else []
         # or_boolean_search_result = [[docID, tf-idf]]
 
-        search_result = nGrams_search_result + or_boolean_search_result
+        search_result = nGrams_search_result + or_boolean_search_result # search_result is combination of the result we got from nGrams and or_boolean_search_result
         endTime = time.time()
         finalTimeMS = (endTime - startTime) * 100
 
@@ -307,8 +302,7 @@ def launch_milestone_2(query, index_of_index, docId_to_urls, full_index):
     
 
     except Exception as e:
-        return []
         print('ERROR launch_milestone_2: ', str(e))
+        return []
 
 
-# launch_milestone_2(query)

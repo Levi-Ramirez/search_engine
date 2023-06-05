@@ -48,8 +48,6 @@ def tokenizer(page_text_content):
         cur_word = ""
         stemmer = PorterStemmer()
         for ch in page_text_content:  # read line character by character
-            # pig's --> pigs is this a problem?
-            # check if character is in english alphabet or a number
             if ch in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.-'":
                 if ch in ".-'":
                     continue
@@ -79,19 +77,18 @@ def get_file_text_content(file_path):
 
     try:
         with open(file_path, 'r') as f:
-            #load json file
-            data = json.load(f)
+            data = json.load(f) #load json file
             html_content = data['content']
-            #get text content
             soup = BeautifulSoup(html_content, 'html.parser')
-            text_content = soup.get_text()
+            text_content = soup.get_text() #get text content
             #for each tag, get its text content
-            ##if it is important, store its weight and incriment
+            ##if it is important, store its weight and increment
             ##each word in the tag according to that weight in bold_word_counter
-            bold_word_counter = {}
-            for tag in soup.findAll():
-                tag_name = tag.name
-                tag_text_content = tag.get_text()
+            bold_word_counter = {} # key = the word found in important tags. value is how many times we see that word
+            
+            for tag in soup.findAll(): # looping all the tags
+                tag_name = tag.name # current tag name
+                tag_text_content = tag.get_text() #content in the tag => <h1> example </h1> tag_text_content is "example"
                 increment_by = 0 # will have different weight for different tags.
                 if tag_name == 'h1':
                     increment_by = 4
@@ -157,11 +154,11 @@ def get_file_paths(folder_path):
     Returns: filepath of all json files (list)
     '''
     paths = []
-    for dirpath, dirnames, filenames in os.walk(folder_path): #MEHMET plz explain what u mdid here with this sorcery ty!
-        for filename in filenames:
-            if filename.endswith('.json'):
-                file_path = os.path.join(dirpath, filename)
-                paths.append(file_path)
+    for dirpath, dirnames, filenames in os.walk(folder_path): #goes in to DEV folder and gets the filename found in the dev folder => dirpath = directory path, dirnames = directory names, filenames = filenames
+        for filename in filenames: # filenames is a list of all the files found in the DEV folder
+            if filename.endswith('.json'): # get the json files
+                file_path = os.path.join(dirpath, filename) # join directory path and filename to create the path of the json file
+                paths.append(file_path) # add the path to the list that we will be return
     return paths
 
 
@@ -200,8 +197,7 @@ def generate_inverted_index(token_locs, docID, strong_word_count):
         with open(fileName, "w") as thisFile:
             res = sorted(inverted_index.items())
             newDict = dict(res)
-            # json.dump(newDict, thisFile)  REPLACE THIS LINE
-            write_to_file(thisFile, newDict)  # replacement
+            write_to_file(thisFile, newDict)  
 
         inverted_index.clear()
         indexSplitCounter = 0
@@ -503,21 +499,20 @@ def launch_milestone_1():
         text_content, bold_word_counter = get_file_text_content(path)
         if not text_content:  # skip if no text content
             continue
-        if is_duplicate_content(text_content): # if we have a page with really similar content of this current document, we will not add to the index.
-            with open(path, 'r') as f:
+        if is_duplicate_content(text_content): # if we have a page with really similar content of this current document, we will not add it to the index.
+            with open(path, 'r') as f: # we wanna have a record of the pages that we did not add to our index
                 data = json.load(f)
                 url = data['url']
                 duplicate_pages_txt.write(url)
                 duplicate_pages_txt.write('\n')
             continue
         
-        docID += 1
+        docID += 1 
         map_docID_url(path, docID) # assign docID to its proper URL // {docID : url}
         tokens = tokenizer(text_content)  # tokenize the text content
 
         token_locs = token_locator(tokens)  # get a list of token positions
 
-        # fill/write out inverted index (if current is full)
         generate_inverted_index(token_locs, docID, bold_word_counter)
 
     
