@@ -47,4 +47,4 @@ def perform_actual_search(query):
     return queryURLs
 
 if __name__ == '__main__':
-    app.run(port=5001)
+    app.run(port=5002)

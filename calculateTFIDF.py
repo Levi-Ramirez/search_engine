@@ -5,14 +5,15 @@ import os
 import math
 
 def create_index_of_index():
-    full_index = open("full_index_tf_idf.txt", 'r')
-    index_of_index = {}
+    full_index = open("full_index_tf_idf.txt", 'r') # create new full index with tf-idf scores
+    index_of_index = {} # positions of full index will change, need to create new index_of_index
+    
     while True:
-        pos = full_index.tell()
-        curLine = read_large_line(full_index)
-        # curLine = full_index.readline()
-        if not curLine:
-            break  # need to break here!
+        pos = full_index.tell() #current position in full_index
+        curLine = read_large_line(full_index) # reading line
+
+        if not curLine: # end of line
+            break  # end of line, EXIT reading
         tempDict = json.loads(curLine)
         for token in tempDict:
             if token in index_of_index:
@@ -59,24 +60,21 @@ def generate_full_index_tf_idf():
     
     
     try:
-        full_index = open('full_index.txt', 'r')
-        total_doc_count = int(open('total_doc_count.txt', 'r').readline())
+        full_index = open('full_index.txt', 'r') #open full index with NO tf-idf scores
+        total_doc_count = int(open('total_doc_count.txt', 'r').readline()) # get total doc amount for our tf-idf formula
 
 
 
 
-        if os.path.isfile("full_index_tf_idf.txt"):
+        if os.path.isfile("full_index_tf_idf.txt"): #create new full index with tf-idf scores
             os.remove("full_index_tf_idf.txt")
         full_index_tf_idf = open('full_index_tf_idf.txt', 'w')
 
-        # testing_break = 0 #remove this
         
         while True:
-            # if testing_break >= 1: #remove this
-                # break
 
             index_txt= read_large_line(full_index)
-            if not index_txt: #if line is empty, end is reached, break
+            if not index_txt: #if line is empty, end is reached, exit
                 break
             index_obj = json.loads(index_txt) #{"000000000000003518": [[33278, [2697], 1]]}
             key = list(index_obj.keys()) 
